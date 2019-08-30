@@ -2,9 +2,10 @@ import Vue from 'vue'
 import _debounce from 'lodash.debounce'
 import { createDecorator } from 'vue-class-component'
 
-import { Overwrite, RequireDistinct, TupleUnion, pick, to_array } from './utils'
+import { Data } from './data'
+import { Overwrite, RequireDistinct, TupleUnion, ErrorHandler, pick, to_array } from './utils'
 
-export const async_computed = createDecorator((component_options, key) => {
+const async_computed = createDecorator((component_options, key) => {
 	const existing_created = component_options.created
 	component_options.created = function() {
 		const computed = (this as any)[key] as AsyncComputedlike
@@ -33,6 +34,7 @@ type AsyncFuncDistinct<V extends Vue, KW extends (keyof V)[], KC extends (keyof 
 
 type OptionsGet<V extends Vue, K extends keyof V, T> = {
 	get: AsyncFunc<V, K, T>,
+	error?: ErrorHandler,
 }
 
 type OptionsGetSingle<V extends Vue, KC extends (keyof V)[], T> =
@@ -61,173 +63,188 @@ type OptionsWatchClosely<V extends Vue, KC extends (keyof V)[]> = {
 
 
 
-// (eager: true, defaulted: true, debounced: true)
-export function computed<V extends Vue, KW extends (keyof V)[], KC extends (keyof V)[], T>(
-	vm: V,
-	options: OptionsGetDistinct<V, KW, KC, T>
-		& OptionsWatch<V, KW> & OptionsWatchClosely<V, KC>
-		& Partial<OptionsDebounce>
-		& OptionsEager
-		& OptionsDefault<T>
-): AsyncComputed<V, KW, KC, T>
-// (eager: true, defaulted: true, debounced: true)
-export function computed<V extends Vue, KW extends (keyof V)[], T>(
-	vm: V,
-	options: OptionsGetSingle<V, KW, T>
-		& OptionsWatch<V, KW>
-		& Partial<OptionsDebounce>
-		& OptionsEager
-		& OptionsDefault<T>
-): AsyncComputed<V, KW, [], T>
+export class Computed<V extends Vue, T> extends Data<V, T> {
+	constructor(
+		readonly error_handler: ErrorHandler | undefined,
+		readonly debounce?: number,
+	) {
+		super(error_handler)
+	}
 
-
-// (eager: true, defaulted: false, debounced: true)
-export function computed<V extends Vue, KW extends (keyof V)[], KC extends (keyof V)[], T>(
-	vm: V,
-	options: OptionsGetDistinct<V, KW, KC, T>
-		& OptionsWatch<V, KW> & OptionsWatchClosely<V, KC>
-		& Partial<OptionsDebounce>
-		& OptionsEager
-): AsyncComputedNoDefault<V, KW, KC, T>
-// (eager: true, defaulted: false, debounced: true)
-export function computed<V extends Vue, KW extends (keyof V)[], T>(
-	vm: V,
-	options: OptionsGetSingle<V, KW, T>
-		& OptionsWatch<V, KW>
-		& Partial<OptionsDebounce>
-		& OptionsEager
-): AsyncComputedNoDefault<V, KW, [], T>
-
-
-// (eager: false, defaulted: true, debounced: true)
-export function computed<V extends Vue, KW extends (keyof V)[], KC extends (keyof V)[], T>(
-	vm: V,
-	options: OptionsGetDistinct<V, KW, KC, T>
-		& OptionsWatch<V, KW> & OptionsWatchClosely<V, KC>
-		& Partial<OptionsDebounce>
-		& OptionsDefault<T>
-): AsyncComputedNotEager<V, KW, KC, T>
-// (eager: false, defaulted: true, debounced: true)
-export function computed<V extends Vue, KW extends (keyof V)[], T>(
-	vm: V,
-	options: OptionsGetSingle<V, KW, T>
-		& OptionsWatch<V, KW>
-		& Partial<OptionsDebounce>
-		& OptionsDefault<T>
-): AsyncComputedNotEager<V, KW, [], T>
-
-
-// (eager: false, defaulted: false, debounced: true)
-export function computed<V extends Vue, KW extends (keyof V)[], KC extends (keyof V)[], T>(
-	vm: V,
-	options: OptionsGetDistinct<V, KW, KC, T>
-		& OptionsWatch<V, KW> & OptionsWatchClosely<V, KC>
-		& Partial<OptionsDebounce>
-): AsyncComputedNotEagerNoDefault<V, KW, KC, T>
-// (eager: false, defaulted: false, debounced: true)
-export function computed<V extends Vue, KW extends (keyof V)[], T>(
-	vm: V,
-	options: OptionsGetSingle<V, KW, T>
-		& OptionsWatch<V, KW>
-		& Partial<OptionsDebounce>
-): AsyncComputedNotEagerNoDefault<V, KW, [], T>
-
-
-
-// (eager: true, defaulted: true, debounced: false)
-export function computed<V extends Vue, KC extends (keyof V)[], T>(
-	vm: V,
-	options: OptionsGetSingle<V, KC, T>
-		& OptionsWatchClosely<V, KC>
-		& OptionsEager
-		& OptionsDefault<T>
-): AsyncComputedNoDebounce<V, KC, T>
-
-// (eager: true, defaulted: false, debounced: false)
-export function computed<V extends Vue, KC extends (keyof V)[], T>(
-	vm: V,
-	options: OptionsGetSingle<V, KC, T>
-		& OptionsWatchClosely<V, KC>
-		& OptionsEager
-): AsyncComputedNoDefaultNoDebounce<V, KC, T>
-
-// (eager: false, defaulted: true, debounced: false)
-export function computed<V extends Vue, KC extends (keyof V)[], T>(
-	vm: V,
-	options: OptionsGetSingle<V, KC, T>
-		& OptionsWatchClosely<V, KC>
-		& OptionsDefault<T>
-): AsyncComputedNotEagerNoDebounce<V, KC, T>
-
-// (eager: false, defaulted: false, debounced: false)
-export function computed<V extends Vue, KC extends (keyof V)[], T>(
-	vm: V,
-	options: OptionsGetSingle<V, KC, T>
-		& OptionsWatchClosely<V, KC>
-): AsyncComputedNotEagerNoDefaultNoDebounce<V, KC, T>
-
-export function computed<V extends Vue, KW extends (keyof V)[], KC extends (keyof V)[], T>(
-	vm: V,
-	options: any,
-): any {
-	const {
-		get: fn,
-		watch: watch_opt = undefined,
-		watch_closely: watch_closely_opt = undefined,
-		eager = false,
-		default: def = undefined,
-		debounce: debounce_opt = 1000,
-	} = options
-
-	const debounce = watch_opt === undefined
-		? undefined
-		: debounce_opt
-
-	const watch = watch_opt || []
-	const watch_closely = watch_closely_opt || []
-
-	// (eager: false, defaulted: false, debounced: false)
-	if (!eager && def === undefined && debounce === undefined)
-		return new AsyncComputedNotEagerNoDefaultNoDebounce(vm, watch_closely, fn, def)
-
-	// (eager: false, defaulted: true, debounced: false)
-	else if (!eager && def !== undefined && debounce === undefined)
-		return new AsyncComputedNotEagerNoDebounce(vm, watch_closely, fn, def)
-
-	// (eager: true, defaulted: false, debounced: false)
-	else if (eager && def === undefined && debounce === undefined)
-		return new AsyncComputedNoDefaultNoDebounce(vm, watch_closely, fn, def)
-
-	// (eager: true, defaulted: true, debounced: false)
-	else if (eager && def !== undefined && debounce === undefined)
-		return new AsyncComputedNoDebounce(vm, watch_closely, fn, def)
-
-	// (eager: false, defaulted: false, debounced: true)
-	else if (!eager && def === undefined && debounce !== undefined)
-		return new AsyncComputedNotEagerNoDefault(vm, watch, watch_closely, fn, debounce, def)
-
-	// (eager: false, defaulted: true, debounced: true)
-	else if (!eager && def !== undefined && debounce !== undefined)
-		return new AsyncComputedNotEager(vm, watch, watch_closely, fn, debounce, def)
-
-	// (eager: true, defaulted: false, debounced: true)
-	else if (eager && def === undefined && debounce !== undefined)
-		return new AsyncComputedNoDefault(vm, watch, watch_closely, fn, debounce, def)
+	async_computed = async_computed
 
 	// (eager: true, defaulted: true, debounced: true)
-	else if (eager && def !== undefined && debounce !== undefined)
-		return new AsyncComputed(vm, watch, watch_closely, fn, debounce, def)
+	computed<KW extends (keyof V)[], KC extends (keyof V)[]>(
+		vm: V,
+		options: OptionsGetDistinct<V, KW, KC, T>
+			& OptionsWatch<V, KW> & OptionsWatchClosely<V, KC>
+			& Partial<OptionsDebounce>
+			& OptionsEager
+			& OptionsDefault<T>,
+	): AsyncComputed<V, KW, KC, T>
+	// (eager: true, defaulted: true, debounced: true)
+	computed<KW extends (keyof V)[]>(
+		vm: V,
+		options: OptionsGetSingle<V, KW, T>
+			& OptionsWatch<V, KW>
+			& Partial<OptionsDebounce>
+			& OptionsEager
+			& OptionsDefault<T>,
+	): AsyncComputed<V, KW, [], T>
 
-	throw new Error(
-		"Somehow the options to async.computed were invalid, and didn't match any actual cases:"
-		+ `\n  get: ${fn}`
-		+ `\n  watch: ${watch_opt}`
-		+ `\n  watch_closely: ${watch_closely}`
-		+ `\n  eager: ${eager}`
-		+ `\n  default: ${def}`
-		+ `\n  debounce: ${debounce_opt}`
-	)
+
+	// (eager: true, defaulted: false, debounced: true)
+	computed<KW extends (keyof V)[], KC extends (keyof V)[]>(
+		vm: V,
+		options: OptionsGetDistinct<V, KW, KC, T>
+			& OptionsWatch<V, KW> & OptionsWatchClosely<V, KC>
+			& Partial<OptionsDebounce>
+			& OptionsEager,
+	): AsyncComputedNoDefault<V, KW, KC, T>
+	// (eager: true, defaulted: false, debounced: true)
+	computed<KW extends (keyof V)[]>(
+		vm: V,
+		options: OptionsGetSingle<V, KW, T>
+			& OptionsWatch<V, KW>
+			& Partial<OptionsDebounce>
+			& OptionsEager,
+	): AsyncComputedNoDefault<V, KW, [], T>
+
+
+	// (eager: false, defaulted: true, debounced: true)
+	computed<KW extends (keyof V)[], KC extends (keyof V)[]>(
+		vm: V,
+		options: OptionsGetDistinct<V, KW, KC, T>
+			& OptionsWatch<V, KW> & OptionsWatchClosely<V, KC>
+			& Partial<OptionsDebounce>
+			& OptionsDefault<T>,
+	): AsyncComputedNotEager<V, KW, KC, T>
+	// (eager: false, defaulted: true, debounced: true)
+	computed<KW extends (keyof V)[]>(
+		vm: V,
+		options: OptionsGetSingle<V, KW, T>
+			& OptionsWatch<V, KW>
+			& Partial<OptionsDebounce>
+			& OptionsDefault<T>,
+	): AsyncComputedNotEager<V, KW, [], T>
+
+
+	// (eager: false, defaulted: false, debounced: true)
+	computed<KW extends (keyof V)[], KC extends (keyof V)[]>(
+		vm: V,
+		options: OptionsGetDistinct<V, KW, KC, T>
+			& OptionsWatch<V, KW> & OptionsWatchClosely<V, KC>
+			& Partial<OptionsDebounce>,
+	): AsyncComputedNotEagerNoDefault<V, KW, KC, T>
+	// (eager: false, defaulted: false, debounced: true)
+	computed<KW extends (keyof V)[]>(
+		vm: V,
+		options: OptionsGetSingle<V, KW, T>
+			& OptionsWatch<V, KW>
+			& Partial<OptionsDebounce>,
+	): AsyncComputedNotEagerNoDefault<V, KW, [], T>
+
+
+	// (eager: true, defaulted: true, debounced: false)
+	computed<KC extends (keyof V)[]>(
+		vm: V,
+		options: OptionsGetSingle<V, KC, T>
+			& OptionsWatchClosely<V, KC>
+			& OptionsEager
+			& OptionsDefault<T>,
+	): AsyncComputedNoDebounce<V, KC, T>
+
+	// (eager: true, defaulted: false, debounced: false)
+	computed<KC extends (keyof V)[]>(
+		vm: V,
+		options: OptionsGetSingle<V, KC, T>
+			& OptionsWatchClosely<V, KC>
+			& OptionsEager,
+	): AsyncComputedNoDefaultNoDebounce<V, KC, T>
+
+	// (eager: false, defaulted: true, debounced: false)
+	computed<KC extends (keyof V)[]>(
+		vm: V,
+		options: OptionsGetSingle<V, KC, T>
+			& OptionsWatchClosely<V, KC>
+			& OptionsDefault<T>,
+	): AsyncComputedNotEagerNoDebounce<V, KC, T>
+
+	// (eager: false, defaulted: false, debounced: false)
+	computed<KC extends (keyof V)[]>(
+		vm: V,
+		options: OptionsGetSingle<V, KC, T>
+			& OptionsWatchClosely<V, KC>,
+	): AsyncComputedNotEagerNoDefaultNoDebounce<V, KC, T>
+
+	computed<KW extends (keyof V)[], KC extends (keyof V)[]>(
+		vm: V,
+		options: any,
+	): any {
+		const { error_handler: error_handler_default, debounce: debounce_default } = this
+
+		const {
+			get: fn,
+			error: error_handler = error_handler_default,
+			watch: watch_opt = undefined,
+			watch_closely: watch_closely_opt = undefined,
+			eager = false,
+			default: def = undefined,
+			debounce: debounce_opt = debounce_default,
+		} = options
+
+		const debounce = watch_opt === undefined
+			? undefined
+			: debounce_opt
+
+		const watch = watch_opt || []
+		const watch_closely = watch_closely_opt || []
+
+		// (eager: true, defaulted: true, debounced: true)
+		if (eager && def !== undefined && debounce !== undefined)
+			return new AsyncComputed(vm, error_handler, watch, watch_closely, fn, debounce, def)
+
+		// (eager: true, defaulted: false, debounced: true)
+		else if (eager && def === undefined && debounce !== undefined)
+			return new AsyncComputedNoDefault(vm, error_handler, watch, watch_closely, fn, debounce, def)
+
+		// (eager: false, defaulted: true, debounced: true)
+		else if (!eager && def !== undefined && debounce !== undefined)
+			return new AsyncComputedNotEager(vm, error_handler, watch, watch_closely, fn, debounce, def)
+
+		// (eager: false, defaulted: false, debounced: true)
+		else if (!eager && def === undefined && debounce !== undefined)
+			return new AsyncComputedNotEagerNoDefault(vm, error_handler, watch, watch_closely, fn, debounce, def)
+
+		// (eager: true, defaulted: true, debounced: false)
+		else if (eager && def !== undefined && debounce === undefined)
+			return new AsyncComputedNoDebounce(vm, error_handler, watch_closely, fn, def)
+
+		// (eager: true, defaulted: false, debounced: false)
+		else if (eager && def === undefined && debounce === undefined)
+			return new AsyncComputedNoDefaultNoDebounce(vm, error_handler, watch_closely, fn, def)
+
+		// (eager: false, defaulted: true, debounced: false)
+		else if (!eager && def !== undefined && debounce === undefined)
+			return new AsyncComputedNotEagerNoDebounce(vm, error_handler, watch_closely, fn, def)
+
+		// (eager: false, defaulted: false, debounced: false)
+		else if (!eager && def === undefined && debounce === undefined)
+			return new AsyncComputedNotEagerNoDefaultNoDebounce(vm, error_handler, watch_closely, fn, def)
+
+		throw new Error(
+			"Somehow the options to async.computed were invalid, and didn't match any actual cases:"
+			+ `\n  get: ${fn}`
+			+ `\n  watch: ${watch_opt}`
+			+ `\n  watch_closely: ${watch_closely}`
+			+ `\n  eager: ${eager}`
+			+ `\n  default: ${def}`
+			+ `\n  debounce: ${debounce_opt}`
+		)
+	}
 }
+
+
 
 
 // this is the root non-debounced
@@ -245,6 +262,7 @@ class AsyncComputedNotEagerNoDefaultNoDebounce<V extends Vue, KC extends (keyof 
 
 	constructor(
 		readonly vm: V,
+		readonly error_handler: ErrorHandler | undefined,
 		readonly watch_closely: KC,
 		readonly fn: AsyncFuncSingle<V, KC, T>,
 		readonly default_value: T | null = null
@@ -261,7 +279,7 @@ class AsyncComputedNotEagerNoDefaultNoDebounce<V extends Vue, KC extends (keyof 
 	}
 
 	protected immediate_handler() {
-		const { vm, watch_closely, default_value } = this
+		const { vm, error_handler, watch_closely, default_value } = this
 		this._loading = true
 		return this._promise = this.fn(pick(vm, watch_closely))
 			.then(v => {
@@ -269,6 +287,7 @@ class AsyncComputedNotEagerNoDefaultNoDebounce<V extends Vue, KC extends (keyof 
 				return this._value = v
 			})
 			.catch(e => {
+				if (error_handler) error_handler(e)
 				this._error = e
 				return this._value = default_value
 			})
@@ -287,11 +306,12 @@ class AsyncComputedNotEagerNoDebounce<V extends Vue, KC extends (keyof V)[], T> 
 
 	constructor(
 		readonly vm: V,
+		readonly error_handler: ErrorHandler | undefined,
 		readonly watch_closely: KC,
 		readonly fn: AsyncFuncSingle<V, KC, T>,
 		readonly default_value: T,
 	) {
-		super(vm, watch_closely, fn, default_value)
+		super(vm, error_handler, watch_closely, fn, default_value)
 		this._value = default_value
 	}
 }
@@ -305,11 +325,12 @@ class AsyncComputedNoDefaultNoDebounce<V extends Vue, KC extends (keyof V)[], T>
 
 	constructor(
 		readonly vm: V,
+		readonly error_handler: ErrorHandler | undefined,
 		readonly watch_closely: KC,
 		readonly fn: AsyncFuncSingle<V, KC, T>,
 		readonly default_value: T | null = null,
 	) {
-		super(vm, watch_closely, fn, default_value)
+		super(vm, error_handler, watch_closely, fn, default_value)
 		// calling immediate_handler is the simplest way to be eager
 		this.immediate_handler()
 	}
@@ -324,11 +345,12 @@ class AsyncComputedNoDebounce<V extends Vue, KC extends (keyof V)[], T> extends 
 
 	constructor(
 		readonly vm: V,
+		readonly error_handler: ErrorHandler | undefined,
 		readonly watch_closely: KC,
 		readonly fn: AsyncFuncSingle<V, KC, T>,
 		readonly default_value: T,
 	) {
-		super(vm, watch_closely, fn, default_value)
+		super(vm, error_handler, watch_closely, fn, default_value)
 		this.immediate_handler()
 		this._value = default_value
 	}
@@ -356,6 +378,7 @@ class AsyncComputedNotEagerNoDefault<V extends Vue, KW extends (keyof V)[], KC e
 
 	constructor(
 		readonly vm: V,
+		readonly error_handler: ErrorHandler | undefined,
 		readonly watch: KW,
 		readonly watch_closely: KC,
 		readonly fn: AsyncFuncDistinct<V, KW, KC, T>,
@@ -388,7 +411,7 @@ class AsyncComputedNotEagerNoDefault<V extends Vue, KW extends (keyof V)[], KC e
 	}
 
 	protected immediate_handler() {
-		const { vm, watch, watch_closely, default_value } = this
+		const { vm, error_handler, watch, watch_closely, default_value } = this
 		this._cancel()
 		this._loading = true
 		return this._promise = this.fn(pick(vm, watch.concat(watch_closely)))
@@ -397,6 +420,7 @@ class AsyncComputedNotEagerNoDefault<V extends Vue, KW extends (keyof V)[], KC e
 				return this._value = v
 			})
 			.catch(e => {
+				if (error_handler) error_handler(e)
 				this._error = e
 				return this._value = default_value
 			})
@@ -426,13 +450,14 @@ class AsyncComputedNotEager<V extends Vue, KW extends (keyof V)[], KC extends (k
 
 	constructor(
 		readonly vm: V,
+		readonly error_handler: ErrorHandler | undefined,
 		readonly watch: KW,
 		readonly watch_closely: KC,
 		readonly fn: AsyncFuncDistinct<V, KW, KC, T>,
 		readonly debounce: number,
 		readonly default_value: T,
 	) {
-		super(vm, watch, watch_closely, fn, debounce, default_value)
+		super(vm, error_handler, watch, watch_closely, fn, debounce, default_value)
 		this._value = default_value
 	}
 }
@@ -446,13 +471,14 @@ class AsyncComputedNoDefault<V extends Vue, KW extends (keyof V)[], KC extends (
 
 	constructor(
 		readonly vm: V,
+		readonly error_handler: ErrorHandler | undefined,
 		readonly watch: KW,
 		readonly watch_closely: KC,
 		readonly fn: AsyncFuncDistinct<V, KW, KC, T>,
 		readonly debounce: number,
 		readonly default_value: T | null = null,
 	) {
-		super(vm, watch, watch_closely, fn, debounce, default_value)
+		super(vm, error_handler, watch, watch_closely, fn, debounce, default_value)
 		this.immediate_handler()
 	}
 }
@@ -467,13 +493,14 @@ class AsyncComputed<V extends Vue, KW extends (keyof V)[], KC extends (keyof V)[
 
 	constructor(
 		readonly vm: V,
+		readonly error_handler: ErrorHandler | undefined,
 		readonly watch: KW,
 		readonly watch_closely: KC,
 		readonly fn: AsyncFuncDistinct<V, KW, KC, T>,
 		readonly debounce: number,
 		readonly default_value: T,
 	) {
-		super(vm, watch, watch_closely, fn, debounce, default_value)
+		super(vm, error_handler, watch, watch_closely, fn, debounce, default_value)
 		this._value = default_value
 		this.immediate_handler()
 	}

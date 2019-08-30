@@ -1,6 +1,8 @@
 // T intersection U
 type Filter<T, U> = T extends U ? T : never
 
+export type ErrorHandler = (e: Error) => void
+
 export type RequireDistinct<A, B> =
 	Filter<A, B> extends never
 		? A | B
