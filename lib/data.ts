@@ -22,19 +22,22 @@ type OptionsLazy = {
 	lazy: true,
 }
 
-export class Data<V extends Vue, T> {
+export class Data {
 	constructor(
 		readonly error_handler: ErrorHandler | undefined,
 	) {}
 
-	// if they use lazy, then they get a nullable promise
-	// if they give a default, they get an non-nullable
-	data(vm: V, fn: AsyncDataFunc<V, T>): AsyncDataNoDefault<V, T>
-	data(vm: V, opts: AsyncDataOptions<V, T> & OptionsLazy & OptionsDefaulted<T>): AsyncDataLazy<V, T>
-	data(vm: V, opts: AsyncDataOptions<V, T> & OptionsLazy): AsyncDataLazyNoDefault<V, T>
-	data(vm: V, opts: AsyncDataOptions<V, T> & OptionsDefaulted<T>): AsyncData<V, T>
-	data(vm: V, opts: AsyncDataOptions<V, T>): AsyncDataNoDefault<V, T>
-	data(
+	// (defaulted: false, lazy: false) just function
+	data<V extends Vue, T>(vm: V, fn: AsyncDataFunc<V, T>): AsyncDataNoDefault<V, T>
+	// (defaulted: false, lazy: true)
+	data<V extends Vue, T>(vm: V, opts: AsyncDataOptions<V, T> & OptionsLazy & OptionsDefaulted<T>): AsyncDataLazy<V, T>
+	// (defaulted: false, lazy: false)
+	data<V extends Vue, T>(vm: V, opts: AsyncDataOptions<V, T> & OptionsLazy): AsyncDataLazyNoDefault<V, T>
+	// (defaulted: true, lazy: true)
+	data<V extends Vue, T>(vm: V, opts: AsyncDataOptions<V, T> & OptionsDefaulted<T>): AsyncData<V, T>
+	// (defaulted: true, lazy: false)
+	data<V extends Vue, T>(vm: V, opts: AsyncDataOptions<V, T>): AsyncDataNoDefault<V, T>
+	data<V extends Vue, T>(
 		vm: V,
 		opts: any,
 	): any {

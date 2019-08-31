@@ -2,6 +2,7 @@
 	"compilerOptions": {
 		"sourceMap": true,
 		"declaration": true,
+		"experimentalDecorators": true,
 		"lib": [
 			"ESNext",
 			"dom",

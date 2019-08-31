@@ -5,7 +5,7 @@ import { createDecorator } from 'vue-class-component'
 import { Data } from './data'
 import { Overwrite, RequireDistinct, TupleUnion, ErrorHandler, pick, to_array } from './utils'
 
-const async_computed = createDecorator((component_options, key) => {
+const ComputedDecorator = createDecorator((component_options, key) => {
 	const existing_created = component_options.created
 	component_options.created = function() {
 		const computed = (this as any)[key] as AsyncComputedlike
@@ -22,26 +22,26 @@ interface AsyncComputedlike {
 }
 
 
-type AsyncFunc<V extends Vue, K extends keyof V, T> =
+type AsyncFunc<V extends Vue, T, K extends keyof V> =
 	(watched_attributes: Pick<V, K>) => Promise<T>
 
-type AsyncFuncSingle<V extends Vue, KC extends (keyof V)[], T> =
-	AsyncFunc<V, TupleUnion<KC>, T>
+type AsyncFuncSingle<V extends Vue, T, KC extends (keyof V)[]> =
+	AsyncFunc<V, T, TupleUnion<KC>>
 
-type AsyncFuncDistinct<V extends Vue, KW extends (keyof V)[], KC extends (keyof V)[], T> =
-	AsyncFunc<V, RequireDistinct<TupleUnion<KW>, TupleUnion<KC>>, T>
+type AsyncFuncDistinct<V extends Vue, T, KW extends (keyof V)[], KC extends (keyof V)[]> =
+	AsyncFunc<V, T, RequireDistinct<TupleUnion<KW>, TupleUnion<KC>>>
 
 
-type OptionsGet<V extends Vue, K extends keyof V, T> = {
-	get: AsyncFunc<V, K, T>,
+type OptionsGet<V extends Vue, T, K extends keyof V> = {
+	get: AsyncFunc<V, T, K>,
 	error?: ErrorHandler,
 }
 
-type OptionsGetSingle<V extends Vue, KC extends (keyof V)[], T> =
-	OptionsGet<V, TupleUnion<KC>, T>
+type OptionsGetSingle<V extends Vue, T, KC extends (keyof V)[]> =
+	OptionsGet<V, T, TupleUnion<KC>>
 
-type OptionsGetDistinct<V extends Vue, KW extends (keyof V)[], KC extends (keyof V)[], T> =
-	OptionsGet<V, RequireDistinct<TupleUnion<KW>, TupleUnion<KC>>, T>
+type OptionsGetDistinct<V extends Vue, T, KW extends (keyof V)[], KC extends (keyof V)[]> =
+	OptionsGet<V, T, RequireDistinct<TupleUnion<KW>, TupleUnion<KC>>>
 
 
 type OptionsEager = {
@@ -63,7 +63,7 @@ type OptionsWatchClosely<V extends Vue, KC extends (keyof V)[]> = {
 
 
 
-export class Computed<V extends Vue, T> extends Data<V, T> {
+export class Computed extends Data {
 	constructor(
 		readonly error_handler: ErrorHandler | undefined,
 		readonly debounce?: number,
@@ -71,113 +71,113 @@ export class Computed<V extends Vue, T> extends Data<V, T> {
 		super(error_handler)
 	}
 
-	async_computed = async_computed
+	Computed = ComputedDecorator
 
 	// (eager: true, defaulted: true, debounced: true)
-	computed<KW extends (keyof V)[], KC extends (keyof V)[]>(
+	computed<V extends Vue, T, KW extends (keyof V)[], KC extends (keyof V)[]>(
 		vm: V,
-		options: OptionsGetDistinct<V, KW, KC, T>
+		options: OptionsGetDistinct<V, T, KW, KC>
 			& OptionsWatch<V, KW> & OptionsWatchClosely<V, KC>
 			& Partial<OptionsDebounce>
 			& OptionsEager
 			& OptionsDefault<T>,
-	): AsyncComputed<V, KW, KC, T>
+	): AsyncComputed<V, T, KW, KC>
 	// (eager: true, defaulted: true, debounced: true)
-	computed<KW extends (keyof V)[]>(
+	computed<V extends Vue, T, KW extends (keyof V)[]>(
 		vm: V,
-		options: OptionsGetSingle<V, KW, T>
+		options: OptionsGetSingle<V, T, KW>
 			& OptionsWatch<V, KW>
 			& Partial<OptionsDebounce>
 			& OptionsEager
 			& OptionsDefault<T>,
-	): AsyncComputed<V, KW, [], T>
+	): AsyncComputed<V, T, KW, []>
 
 
 	// (eager: true, defaulted: false, debounced: true)
-	computed<KW extends (keyof V)[], KC extends (keyof V)[]>(
+	computed<V extends Vue, T, KW extends (keyof V)[], KC extends (keyof V)[]>(
 		vm: V,
-		options: OptionsGetDistinct<V, KW, KC, T>
+		options: OptionsGetDistinct<V, T, KW, KC>
 			& OptionsWatch<V, KW> & OptionsWatchClosely<V, KC>
 			& Partial<OptionsDebounce>
 			& OptionsEager,
-	): AsyncComputedNoDefault<V, KW, KC, T>
+	): AsyncComputedNoDefault<V, T, KW, KC>
 	// (eager: true, defaulted: false, debounced: true)
-	computed<KW extends (keyof V)[]>(
+	computed<V extends Vue, T, KW extends (keyof V)[]>(
 		vm: V,
-		options: OptionsGetSingle<V, KW, T>
+		options: OptionsGetSingle<V, T, KW>
 			& OptionsWatch<V, KW>
 			& Partial<OptionsDebounce>
 			& OptionsEager,
-	): AsyncComputedNoDefault<V, KW, [], T>
+	): AsyncComputedNoDefault<V, T, KW, []>
 
 
 	// (eager: false, defaulted: true, debounced: true)
-	computed<KW extends (keyof V)[], KC extends (keyof V)[]>(
+	computed<V extends Vue, T, KW extends (keyof V)[], KC extends (keyof V)[]>(
 		vm: V,
-		options: OptionsGetDistinct<V, KW, KC, T>
+		options: OptionsGetDistinct<V, T, KW, KC>
 			& OptionsWatch<V, KW> & OptionsWatchClosely<V, KC>
 			& Partial<OptionsDebounce>
 			& OptionsDefault<T>,
-	): AsyncComputedNotEager<V, KW, KC, T>
+	): AsyncComputedNotEager<V, T, KW, KC>
 	// (eager: false, defaulted: true, debounced: true)
-	computed<KW extends (keyof V)[]>(
+	computed<V extends Vue, T, KW extends (keyof V)[]>(
 		vm: V,
-		options: OptionsGetSingle<V, KW, T>
+		options: OptionsGetSingle<V, T, KW>
 			& OptionsWatch<V, KW>
 			& Partial<OptionsDebounce>
 			& OptionsDefault<T>,
-	): AsyncComputedNotEager<V, KW, [], T>
+	): AsyncComputedNotEager<V, T, KW, []>
 
 
 	// (eager: false, defaulted: false, debounced: true)
-	computed<KW extends (keyof V)[], KC extends (keyof V)[]>(
+	computed<V extends Vue, T, KW extends (keyof V)[], KC extends (keyof V)[]>(
 		vm: V,
-		options: OptionsGetDistinct<V, KW, KC, T>
+		options: OptionsGetDistinct<V, T, KW, KC>
 			& OptionsWatch<V, KW> & OptionsWatchClosely<V, KC>
 			& Partial<OptionsDebounce>,
-	): AsyncComputedNotEagerNoDefault<V, KW, KC, T>
+	): AsyncComputedNotEagerNoDefault<V, T, KW, KC>
 	// (eager: false, defaulted: false, debounced: true)
-	computed<KW extends (keyof V)[]>(
+	computed<V extends Vue, T, KW extends (keyof V)[]>(
 		vm: V,
-		options: OptionsGetSingle<V, KW, T>
+		options: OptionsGetSingle<V, T, KW>
 			& OptionsWatch<V, KW>
 			& Partial<OptionsDebounce>,
-	): AsyncComputedNotEagerNoDefault<V, KW, [], T>
+	): AsyncComputedNotEagerNoDefault<V, T, KW, []>
 
 
 	// (eager: true, defaulted: true, debounced: false)
-	computed<KC extends (keyof V)[]>(
+	computed<V extends Vue, T, KC extends (keyof V)[]>(
 		vm: V,
-		options: OptionsGetSingle<V, KC, T>
+		options: OptionsGetSingle<V, T, KC>
 			& OptionsWatchClosely<V, KC>
 			& OptionsEager
 			& OptionsDefault<T>,
-	): AsyncComputedNoDebounce<V, KC, T>
+	): AsyncComputedNoDebounce<V, T, KC>
 
 	// (eager: true, defaulted: false, debounced: false)
-	computed<KC extends (keyof V)[]>(
+	computed<V extends Vue, T, KC extends (keyof V)[]>(
 		vm: V,
-		options: OptionsGetSingle<V, KC, T>
+		options: OptionsGetSingle<V, T, KC>
 			& OptionsWatchClosely<V, KC>
 			& OptionsEager,
-	): AsyncComputedNoDefaultNoDebounce<V, KC, T>
+	): AsyncComputedNoDefaultNoDebounce<V, T, KC>
 
 	// (eager: false, defaulted: true, debounced: false)
-	computed<KC extends (keyof V)[]>(
+	computed<V extends Vue, T, KC extends (keyof V)[]>(
 		vm: V,
-		options: OptionsGetSingle<V, KC, T>
+		options: OptionsGetSingle<V, T, KC>
 			& OptionsWatchClosely<V, KC>
 			& OptionsDefault<T>,
-	): AsyncComputedNotEagerNoDebounce<V, KC, T>
+	): AsyncComputedNotEagerNoDebounce<V, T, KC>
 
 	// (eager: false, defaulted: false, debounced: false)
-	computed<KC extends (keyof V)[]>(
+	computed<V extends Vue, T, KC extends (keyof V)[]>(
 		vm: V,
-		options: OptionsGetSingle<V, KC, T>
+		options: OptionsGetSingle<V, T, KC>
 			& OptionsWatchClosely<V, KC>,
-	): AsyncComputedNotEagerNoDefaultNoDebounce<V, KC, T>
+	): AsyncComputedNotEagerNoDefaultNoDebounce<V, T, KC>
 
-	computed<KW extends (keyof V)[], KC extends (keyof V)[]>(
+	computed<V extends Vue, T, KW extends (keyof V)[], KC extends (keyof V)[]>(
 		vm: V,
 		options: any,
 	): any {
@@ -249,7 +249,7 @@ export class Computed<V extends Vue, T> extends Data<V, T> {
 
 // this is the root non-debounced
 // (eager: false, defaulted: false, debounced: false)
-class AsyncComputedNotEagerNoDefaultNoDebounce<V extends Vue, KC extends (keyof V)[], T> implements AsyncComputedlike {
+class AsyncComputedNotEagerNoDefaultNoDebounce<V extends Vue, T, KC extends (keyof V)[]> implements AsyncComputedlike {
 	protected _promise: Promise<T | null> | null = null
 	protected _value: T | null = null
 	get promise() { return this._promise }
@@ -264,7 +264,7 @@ class AsyncComputedNotEagerNoDefaultNoDebounce<V extends Vue, KC extends (keyof 
 		readonly vm: V,
 		readonly error_handler: ErrorHandler | undefined,
 		readonly watch_closely: KC,
-		readonly fn: AsyncFuncSingle<V, KC, T>,
+		readonly fn: AsyncFuncSingle<V, T, KC>,
 		readonly default_value: T | null = null
 	) {}
 
@@ -298,7 +298,7 @@ class AsyncComputedNotEagerNoDefaultNoDebounce<V extends Vue, KC extends (keyof 
 }
 
 // (eager: false, defaulted: true, debounced: false)
-class AsyncComputedNotEagerNoDebounce<V extends Vue, KC extends (keyof V)[], T> extends AsyncComputedNotEagerNoDefaultNoDebounce<V, KC, T> {
+class AsyncComputedNotEagerNoDebounce<V extends Vue, T, KC extends (keyof V)[]> extends AsyncComputedNotEagerNoDefaultNoDebounce<V, T, KC> {
 	protected _promise: Promise<T> | null = null
 	protected _value: T
 	get promise() { return this._promise }
@@ -308,7 +308,7 @@ class AsyncComputedNotEagerNoDebounce<V extends Vue, KC extends (keyof V)[], T> 
 		readonly vm: V,
 		readonly error_handler: ErrorHandler | undefined,
 		readonly watch_closely: KC,
-		readonly fn: AsyncFuncSingle<V, KC, T>,
+		readonly fn: AsyncFuncSingle<V, T, KC>,
 		readonly default_value: T,
 	) {
 		super(vm, error_handler, watch_closely, fn, default_value)
@@ -317,7 +317,7 @@ class AsyncComputedNotEagerNoDebounce<V extends Vue, KC extends (keyof V)[], T> 
 }
 
 // (eager: true, defaulted: false, debounced: false)
-class AsyncComputedNoDefaultNoDebounce<V extends Vue, KC extends (keyof V)[], T> extends AsyncComputedNotEagerNoDefaultNoDebounce<V, KC, T> {
+class AsyncComputedNoDefaultNoDebounce<V extends Vue, T, KC extends (keyof V)[]> extends AsyncComputedNotEagerNoDefaultNoDebounce<V, T, KC> {
 	protected _promise!: Promise<T | null>
 	protected _value: T | null = null
 	get promise() { return this._promise }
@@ -327,7 +327,7 @@ class AsyncComputedNoDefaultNoDebounce<V extends Vue, KC extends (keyof V)[], T>
 		readonly vm: V,
 		readonly error_handler: ErrorHandler | undefined,
 		readonly watch_closely: KC,
-		readonly fn: AsyncFuncSingle<V, KC, T>,
+		readonly fn: AsyncFuncSingle<V, T, KC>,
 		readonly default_value: T | null = null,
 	) {
 		super(vm, error_handler, watch_closely, fn, default_value)
@@ -337,7 +337,7 @@ class AsyncComputedNoDefaultNoDebounce<V extends Vue, KC extends (keyof V)[], T>
 }
 
 // (eager: true, defaulted: true, debounced: false)
-class AsyncComputedNoDebounce<V extends Vue, KC extends (keyof V)[], T> extends AsyncComputedNotEagerNoDefaultNoDebounce<V, KC, T> {
+class AsyncComputedNoDebounce<V extends Vue, T, KC extends (keyof V)[]> extends AsyncComputedNotEagerNoDefaultNoDebounce<V, T, KC> {
 	protected _promise!: Promise<T>
 	protected _value: T
 	get promise() { return this._promise }
@@ -347,7 +347,7 @@ class AsyncComputedNoDebounce<V extends Vue, KC extends (keyof V)[], T> extends 
 		readonly vm: V,
 		readonly error_handler: ErrorHandler | undefined,
 		readonly watch_closely: KC,
-		readonly fn: AsyncFuncSingle<V, KC, T>,
+		readonly fn: AsyncFuncSingle<V, T, KC>,
 		readonly default_value: T,
 	) {
 		super(vm, error_handler, watch_closely, fn, default_value)
@@ -360,7 +360,7 @@ class AsyncComputedNoDebounce<V extends Vue, KC extends (keyof V)[], T> extends 
 
 // this is the root debounced
 // (eager: false, defaulted: false, debounced: true)
-class AsyncComputedNotEagerNoDefault<V extends Vue, KW extends (keyof V)[], KC extends (keyof V)[], T> implements AsyncComputedlike {
+class AsyncComputedNotEagerNoDefault<V extends Vue, T, KW extends (keyof V)[], KC extends (keyof V)[]> implements AsyncComputedlike {
 	protected _promise: Promise<T | null> | null = null
 	protected _value: T | null = null
 	get promise() { return this._promise }
@@ -381,11 +381,11 @@ class AsyncComputedNotEagerNoDefault<V extends Vue, KW extends (keyof V)[], KC e
 		readonly error_handler: ErrorHandler | undefined,
 		readonly watch: KW,
 		readonly watch_closely: KC,
-		readonly fn: AsyncFuncDistinct<V, KW, KC, T>,
+		readonly fn: AsyncFuncDistinct<V, T, KW, KC>,
 		readonly debounce: number,
 		readonly default_value: T | null = null,
 	) {
-		this.debounced_fn = _debounce(this.immediate_handler.bind(this), debounce)
+		this.debounced_fn = _debounce(() => { this.immediate_handler() }, debounce)
 	}
 
 	initialize_watches() {
@@ -442,7 +442,7 @@ class AsyncComputedNotEagerNoDefault<V extends Vue, KW extends (keyof V)[], KC e
 }
 
 // (eager: false, defaulted: true, debounced: true)
-class AsyncComputedNotEager<V extends Vue, KW extends (keyof V)[], KC extends (keyof V)[], T> extends AsyncComputedNotEagerNoDefault<V, KW, KC, T> {
+class AsyncComputedNotEager<V extends Vue, T, KW extends (keyof V)[], KC extends (keyof V)[]> extends AsyncComputedNotEagerNoDefault<V, T, KW, KC> {
 	protected _promise: Promise<T> | null = null
 	protected _value: T
 	get promise() { return this._promise }
@@ -453,7 +453,7 @@ class AsyncComputedNotEager<V extends Vue, KW extends (keyof V)[], KC extends (k
 		readonly error_handler: ErrorHandler | undefined,
 		readonly watch: KW,
 		readonly watch_closely: KC,
-		readonly fn: AsyncFuncDistinct<V, KW, KC, T>,
+		readonly fn: AsyncFuncDistinct<V, T, KW, KC>,
 		readonly debounce: number,
 		readonly default_value: T,
 	) {
@@ -463,7 +463,7 @@ class AsyncComputedNotEager<V extends Vue, KW extends (keyof V)[], KC extends (k
 }
 
 // (eager: true, defaulted: false, debounced: true)
-class AsyncComputedNoDefault<V extends Vue, KW extends (keyof V)[], KC extends (keyof V)[], T> extends AsyncComputedNotEagerNoDefault<V, KW, KC, T> {
+class AsyncComputedNoDefault<V extends Vue, T, KW extends (keyof V)[], KC extends (keyof V)[]> extends AsyncComputedNotEagerNoDefault<V, T, KW, KC> {
 	protected _promise!: Promise<T | null>
 	protected _value: T | null = null
 	get promise() { return this._promise }
@@ -474,7 +474,7 @@ class AsyncComputedNoDefault<V extends Vue, KW extends (keyof V)[], KC extends (
 		readonly error_handler: ErrorHandler | undefined,
 		readonly watch: KW,
 		readonly watch_closely: KC,
-		readonly fn: AsyncFuncDistinct<V, KW, KC, T>,
+		readonly fn: AsyncFuncDistinct<V, T, KW, KC>,
 		readonly debounce: number,
 		readonly default_value: T | null = null,
 	) {
@@ -484,7 +484,7 @@ class AsyncComputedNoDefault<V extends Vue, KW extends (keyof V)[], KC extends (
 }
 
 // (eager: true, defaulted: true, debounced: true)
-class AsyncComputed<V extends Vue, KW extends (keyof V)[], KC extends (keyof V)[], T> extends AsyncComputedNotEagerNoDefault<V, KW, KC, T> {
+class AsyncComputed<V extends Vue, T, KW extends (keyof V)[], KC extends (keyof V)[]> extends AsyncComputedNotEagerNoDefault<V, T, KW, KC> {
 	protected _promise!: Promise<T>
 	protected _value: T
 
@@ -496,7 +496,7 @@ class AsyncComputed<V extends Vue, KW extends (keyof V)[], KC extends (keyof V)[
 		readonly error_handler: ErrorHandler | undefined,
 		readonly watch: KW,
 		readonly watch_closely: KC,
-		readonly fn: AsyncFuncDistinct<V, KW, KC, T>,
+		readonly fn: AsyncFuncDistinct<V, T, KW, KC>,
 		readonly debounce: number,
 		readonly default_value: T,
 	) {
