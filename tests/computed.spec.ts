@@ -1,11 +1,14 @@
 import 'mocha'
 import Vue from 'vue'
+import sinon from 'sinon'
 import { expect } from 'chai'
 import { delay } from 'bluebird'
 import Component from 'vue-class-component'
 import { shallowMount } from '@vue/test-utils'
 
 import VueAsync from '../lib/index'
+
+// const clock = sinon.useFakeTimers()
 
 const async = VueAsync({ debounce: 25 })
 
@@ -44,6 +47,8 @@ describe('computed', () => {
 		expect(m.vm.computed.queued).false
 	})
 	it('(eager: true, defaulted: true, debounced: true) with watch_closely', async () => {
+		const error_handler = sinon.spy()
+
 		@Component({ render(h) { return h('div', ['hello']) } })
 		class A extends Vue {
 			num = 1; yes = true
@@ -51,7 +56,11 @@ describe('computed', () => {
 			computed = async.computed(this, {
 				watch: ['num'],
 				watch_closely: ['yes'],
-				async get({ num, yes }) { return await delay(25, yes ? num + 1 : 4) },
+				async get({ num, yes }) {
+					if (!yes) throw new Error('e')
+					return await delay(25, num + 1)
+				},
+				error: error_handler,
 				default: 0,
 				eager: true,
 			})
@@ -76,6 +85,11 @@ describe('computed', () => {
 		expect(m.vm.computed.value).eql(2)
 		expect(m.vm.computed.loading).false
 		expect(m.vm.computed.queued).false
+
+		m.setData({ yes: false })
+		await m.vm.computed.promise
+		expect(error_handler.calledOnce).true
+		expect(m.vm.computed.error!.message).eql('e')
 	})
 
 
@@ -316,13 +330,19 @@ describe('computed', () => {
 
 
 	it('(eager: true, defaulted: true, debounced: false)', async () => {
+		const error_handler = sinon.spy()
+
 		@Component({ render(h) { return h('div', ['hello']) } })
 		class A extends Vue {
 			num = 1; yes = true
 			@async.Computed
 			computed = async.computed(this, {
 				watch_closely: ['num'],
-				async get({ num }) { return await delay(25, num + 1) },
+				async get({ num }) {
+					if (num === 10) throw new Error('e')
+					return await delay(25, num + 1)
+				},
+				error: error_handler,
 				default: 0,
 				eager: true,
 			})
@@ -351,6 +371,11 @@ describe('computed', () => {
 		await m.vm.computed.promise
 		expect(m.vm.computed.value).eql(3)
 		expect(m.vm.computed.loading).false
+
+		m.setData({ num: 10 })
+		await m.vm.computed.promise
+		expect(error_handler.calledOnce).true
+		expect(m.vm.computed.error!.message).eql('e')
 	})
 
 	it('(eager: true, defaulted: false, debounced: false)', async () => {
