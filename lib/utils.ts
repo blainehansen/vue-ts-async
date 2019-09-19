@@ -1,4 +1,3 @@
-// T intersection U
 type Filter<T, U> = T extends U ? T : never
 
 export type ErrorHandler = (e: Error) => void
@@ -13,6 +12,11 @@ export type Overwrite<A, B> = {
 } & B
 
 export type TupleUnion<L extends any[]> = L[number]
+
+export type Picker<V, P extends (keyof V)[] | ((this: V) => unknown)> =
+	[P] extends [(this: V) => infer T] ? T
+	: [P] extends [(keyof V)[]] ? Pick<V, TupleUnion<P>>
+	: never
 
 
 export function pick<V, K extends keyof V>(obj: V, keys: K[]): Pick<V, K> {

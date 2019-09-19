@@ -53,11 +53,14 @@ type OptionsDefault<T> = {
 type OptionsDebounce = {
 	debounce: number
 }
+
+type PickFunction<V extends Vue, K extends (keyof V)[]> = (this: V) => Pick<V, TupleUnion<K>>
+
 type OptionsWatch<V extends Vue, KW extends (keyof V)[]> = {
-	watch: KW,
+	watch: KW | PickFunction<V, KW>,
 }
 type OptionsWatchClosely<V extends Vue, KC extends (keyof V)[]> = {
-	watch_closely: KC,
+	watch_closely: KC | PickFunction<V, KC>,
 }
 
 
@@ -65,8 +68,8 @@ type OptionsWatchClosely<V extends Vue, KC extends (keyof V)[]> = {
 
 export class Computed extends Data {
 	constructor(
+		readonly debounce: number,
 		readonly error_handler: ErrorHandler | undefined,
-		readonly debounce?: number,
 	) {
 		super(error_handler)
 	}
@@ -197,6 +200,15 @@ export class Computed extends Data {
 			? undefined
 			: debounce_opt
 
+		// actually means it's an array
+		// const watch = typeof watch_opt === 'object'
+		// 	? function(this: V) { return pick(this, watch_opt) }
+		// 	: watch_opt
+
+		// const watch_closely = typeof watch_closely_opt === 'object'
+		// 	? function(this: V) { return pick(this, watch_closely_opt) }
+		// 	: watch_closely_opt
+
 		const watch = watch_opt || []
 		const watch_closely = watch_closely_opt || []
 
@@ -263,7 +275,8 @@ class AsyncComputedNotEagerNoDefaultNoDebounce<V extends Vue, T, KC extends (key
 	constructor(
 		readonly vm: V,
 		readonly error_handler: ErrorHandler | undefined,
-		readonly watch_closely: KC,
+		// readonly watch_closely: KC,
+		readonly watch_closely: PickFunction<V, KC>,
 		readonly fn: AsyncFuncSingle<V, T, KC>,
 		readonly default_value: T | null = null
 	) {}
@@ -307,7 +320,8 @@ class AsyncComputedNotEagerNoDebounce<V extends Vue, T, KC extends (keyof V)[]> 
 	constructor(
 		readonly vm: V,
 		readonly error_handler: ErrorHandler | undefined,
-		readonly watch_closely: KC,
+		// readonly watch_closely: KC,
+		readonly watch_closely: PickFunction<V, KC>,
 		readonly fn: AsyncFuncSingle<V, T, KC>,
 		readonly default_value: T,
 	) {
@@ -326,7 +340,8 @@ class AsyncComputedNoDefaultNoDebounce<V extends Vue, T, KC extends (keyof V)[]>
 	constructor(
 		readonly vm: V,
 		readonly error_handler: ErrorHandler | undefined,
-		readonly watch_closely: KC,
+		// readonly watch_closely: KC,
+		readonly watch_closely: PickFunction<V, KC>,
 		readonly fn: AsyncFuncSingle<V, T, KC>,
 		readonly default_value: T | null = null,
 	) {
@@ -346,7 +361,8 @@ class AsyncComputedNoDebounce<V extends Vue, T, KC extends (keyof V)[]> extends 
 	constructor(
 		readonly vm: V,
 		readonly error_handler: ErrorHandler | undefined,
-		readonly watch_closely: KC,
+		// readonly watch_closely: KC,
+		readonly watch_closely: PickFunction<V, KC>,
 		readonly fn: AsyncFuncSingle<V, T, KC>,
 		readonly default_value: T,
 	) {
@@ -379,8 +395,10 @@ class AsyncComputedNotEagerNoDefault<V extends Vue, T, KW extends (keyof V)[], K
 	constructor(
 		readonly vm: V,
 		readonly error_handler: ErrorHandler | undefined,
-		readonly watch: KW,
-		readonly watch_closely: KC,
+		// readonly watch: KW,
+		readonly watch: PickFunction<V, KW>,
+		// readonly watch_closely: KC,
+		readonly watch_closely: PickFunction<V, KC>,
 		readonly fn: AsyncFuncDistinct<V, T, KW, KC>,
 		readonly debounce: number,
 		readonly default_value: T | null = null,
@@ -451,8 +469,10 @@ class AsyncComputedNotEager<V extends Vue, T, KW extends (keyof V)[], KC extends
 	constructor(
 		readonly vm: V,
 		readonly error_handler: ErrorHandler | undefined,
-		readonly watch: KW,
-		readonly watch_closely: KC,
+		// readonly watch: KW,
+		readonly watch: PickFunction<V, KW>,
+		// readonly watch_closely: KC,
+		readonly watch_closely: PickFunction<V, KC>,
 		readonly fn: AsyncFuncDistinct<V, T, KW, KC>,
 		readonly debounce: number,
 		readonly default_value: T,
@@ -472,8 +492,10 @@ class AsyncComputedNoDefault<V extends Vue, T, KW extends (keyof V)[], KC extend
 	constructor(
 		readonly vm: V,
 		readonly error_handler: ErrorHandler | undefined,
-		readonly watch: KW,
-		readonly watch_closely: KC,
+		// readonly watch: KW,
+		readonly watch: PickFunction<V, KW>,
+		// readonly watch_closely: KC,
+		readonly watch_closely: PickFunction<V, KC>,
 		readonly fn: AsyncFuncDistinct<V, T, KW, KC>,
 		readonly debounce: number,
 		readonly default_value: T | null = null,
@@ -494,8 +516,10 @@ class AsyncComputed<V extends Vue, T, KW extends (keyof V)[], KC extends (keyof 
 	constructor(
 		readonly vm: V,
 		readonly error_handler: ErrorHandler | undefined,
-		readonly watch: KW,
-		readonly watch_closely: KC,
+		// readonly watch: KW,
+		readonly watch: PickFunction<V, KW>,
+		// readonly watch_closely: KC,
+		readonly watch_closely: PickFunction<V, KC>,
 		readonly fn: AsyncFuncDistinct<V, T, KW, KC>,
 		readonly debounce: number,
 		readonly default_value: T,

@@ -5,6 +5,8 @@ import { ErrorHandler } from './utils'
 
 class VueTsAsync extends Computed {}
 
-export default function VueAsync({ error, debounce }: { error?: ErrorHandler, debounce?: number } = {}) {
-	return new VueTsAsync(error, debounce)
+export type VueAsyncOptions = { debounce?: number, error?: ErrorHandler }
+
+export default function VueAsync({ debounce = 1000, error }: VueAsyncOptions = {}) {
+	return new VueTsAsync(debounce, error)
 }
