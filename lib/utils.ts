@@ -7,6 +7,11 @@ export type RequireDistinct<A, B> =
 		? A | B
 		: never
 
+export type RequireDistinctIntersection<A, B> =
+	Filter<keyof A, keyof B> extends never
+		? A & B
+		: never
+
 export type Overwrite<A, B> = {
 	[K in Exclude<keyof A, keyof B>]: A[K]
 } & B

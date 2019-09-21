@@ -3,7 +3,7 @@ import _debounce from 'lodash.debounce'
 import { createDecorator } from 'vue-class-component'
 
 import { Data } from './data'
-import { Overwrite, RequireDistinct, TupleUnion, ErrorHandler, pick, to_array } from './utils'
+import { Overwrite, RequireDistinctIntersection, TupleUnion, ErrorHandler, pick, to_array } from './utils'
 
 const ComputedDecorator = createDecorator((component_options, key) => {
 	const existing_created = component_options.created
@@ -22,26 +22,70 @@ interface AsyncComputedlike {
 }
 
 
-type AsyncFunc<V extends Vue, T, K extends keyof V> =
-	(watched_attributes: Pick<V, K>) => Promise<T>
-
-type AsyncFuncSingle<V extends Vue, T, KC extends (keyof V)[]> =
-	AsyncFunc<V, T, TupleUnion<KC>>
-
-type AsyncFuncDistinct<V extends Vue, T, KW extends (keyof V)[], KC extends (keyof V)[]> =
-	AsyncFunc<V, T, RequireDistinct<TupleUnion<KW>, TupleUnion<KC>>>
 
 
-type OptionsGet<V extends Vue, T, K extends keyof V> = {
-	get: AsyncFunc<V, T, K>,
+type Watcher<V> = (keyof V)[] | ((this: V) => any)
+
+type WatcherOutput<V, W extends Watcher<V>> =
+	[W] extends [(this: V) => infer T] ? T
+	: [W] extends [(keyof V)[]] ? Pick<V, TupleUnion<P>>
+	: never
+
+
+type AsyncFunc<I, T> =
+	(watched_attributes: I) => Promise<T>
+
+type OptionsGet<I, T> = {
+	get: AsyncFunc<I, T>,
 	error?: ErrorHandler,
 }
 
-type OptionsGetSingle<V extends Vue, T, KC extends (keyof V)[]> =
-	OptionsGet<V, T, TupleUnion<KC>>
+type OptionsGetSingle<T, V extends Vue, W extends Watcher<V>> =
+	OptionsGet<WatcherOutput<W>, T>
 
-type OptionsGetDistinct<V extends Vue, T, KW extends (keyof V)[], KC extends (keyof V)[]> =
-	OptionsGet<V, T, RequireDistinct<TupleUnion<KW>, TupleUnion<KC>>>
+type OptionsGetDistinct<T, V extends Vue, WC extends Watcher<V>, WW extends Watcher<V>> =
+	OptionsGet<RequireDistinctIntersection<WatcherOutput<WC>, WatcherOutput<WW>>, T>
+
+
+type OptionsWatch<V extends Vue, WW extends Watcher<V>> = {
+	watch: WW,
+}
+type OptionsWatchClosely<V extends Vue, WC extends Watcher<V>> = {
+	watch_closely: WC,
+}
+
+
+
+
+// type AsyncFunc<V extends Vue, T, K extends keyof V> =
+// 	(watched_attributes: Pick<V, K>) => Promise<T>
+
+// type AsyncFuncSingle<V extends Vue, T, KC extends (keyof V)[]> =
+// 	AsyncFunc<V, T, TupleUnion<KC>>
+
+// type AsyncFuncDistinct<V extends Vue, T, KW extends (keyof V)[], KC extends (keyof V)[]> =
+// 	AsyncFunc<V, T, RequireDistinct<TupleUnion<KW>, TupleUnion<KC>>>
+
+
+// type OptionsGet<V extends Vue, T, K extends keyof V> = {
+// 	get: AsyncFunc<V, T, K>,
+// 	error?: ErrorHandler,
+// }
+
+// type OptionsGetSingle<V extends Vue, T, KC extends (keyof V)[]> =
+// 	OptionsGet<V, T, TupleUnion<KC>>
+
+// type OptionsGetDistinct<V extends Vue, T, KW extends (keyof V)[], KC extends (keyof V)[]> =
+// 	OptionsGet<V, T, RequireDistinct<TupleUnion<KW>, TupleUnion<KC>>>
+
+// type PickFunction<V extends Vue, K extends (keyof V)[]> = (this: V) => Pick<V, TupleUnion<K>>
+
+// type OptionsWatch<V extends Vue, KW extends (keyof V)[]> = {
+// 	watch: KW | PickFunction<V, KW>,
+// }
+// type OptionsWatchClosely<V extends Vue, KC extends (keyof V)[]> = {
+// 	watch_closely: KC | PickFunction<V, KC>,
+// }
 
 
 type OptionsEager = {
@@ -53,17 +97,6 @@ type OptionsDefault<T> = {
 type OptionsDebounce = {
 	debounce: number
 }
-
-type PickFunction<V extends Vue, K extends (keyof V)[]> = (this: V) => Pick<V, TupleUnion<K>>
-
-type OptionsWatch<V extends Vue, KW extends (keyof V)[]> = {
-	watch: KW | PickFunction<V, KW>,
-}
-type OptionsWatchClosely<V extends Vue, KC extends (keyof V)[]> = {
-	watch_closely: KC | PickFunction<V, KC>,
-}
-
-
 
 
 export class Computed extends Data {
