@@ -7,9 +7,6 @@ import { Overwrite, ErrorHandler } from './utils'
 // 	//
 // }
 
-/**
- * A function with your Vue instance as the `this` context that returns a promise.
- */
 export type AsyncDataFunc<V extends Vue, T> = (this: V) => Promise<T>
 
 export type AsyncDataOptions<V extends Vue, T> = {
@@ -26,9 +23,6 @@ export type OptionsLazy = {
 }
 
 export class Data {
-	/**
-	 * @ignore
-	 */
 	constructor(
 		protected readonly error_handler: ErrorHandler | undefined,
 	) {}
