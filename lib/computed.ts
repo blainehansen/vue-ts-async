@@ -270,7 +270,7 @@ export class Computed extends Data {
 
 // this is the root non-debounced
 // (eager: false, defaulted: false, debounced: false)
-class AsyncComputedNotEagerNoDefaultNoDebounce<V extends Vue, T, WC extends Watcher<V>> implements AsyncComputedlike {
+class AsyncComputedNotEagerNoDefaultNoDebounce<V extends Vue, T, WC extends Watcher<V>> {
 	protected _promise: Promise<T | null> | null = null
 	protected _value: T | null = null
 	get promise() { return this._promise }
@@ -290,7 +290,7 @@ class AsyncComputedNotEagerNoDefaultNoDebounce<V extends Vue, T, WC extends Watc
 		readonly deep = true,
 	) {}
 
-	initializeWatches() {
+	protected initializeWatches() {
 		const { vm, watchClosely, deep } = this
 
 		if (watchClosely !== undefined)
@@ -391,7 +391,7 @@ class AsyncComputedNoDebounce<V extends Vue, T, WC extends Watcher<V>> extends A
 
 // this is the root debounced
 // (eager: false, defaulted: false, debounced: true)
-class AsyncComputedNotEagerNoDefault<V extends Vue, T, WW extends Watcher<V>, WC extends Watcher<V>> implements AsyncComputedlike {
+class AsyncComputedNotEagerNoDefault<V extends Vue, T, WW extends Watcher<V>, WC extends Watcher<V>> {
 	protected _promise: Promise<T | null> | null = null
 	protected _value: T | null = null
 	get promise() { return this._promise }
@@ -429,7 +429,7 @@ class AsyncComputedNotEagerNoDefault<V extends Vue, T, WW extends Watcher<V>, WC
 		}
 	}
 
-	initializeWatches() {
+	protected initializeWatches() {
 		const { vm, watch, watchClosely, deep } = this
 		if (watchClosely !== undefined) {
 			vm.$watch(

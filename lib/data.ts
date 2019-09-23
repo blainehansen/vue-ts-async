@@ -1,6 +1,6 @@
 import Vue from 'vue'
 
-import { Overwrite, ErrorHandler } from './utils'
+import { ErrorHandler } from './utils'
 
 // more?: () =>
 // type InfiniteAsyncDataOptions<> = {
@@ -75,29 +75,31 @@ class AsyncDataLazyNoDefault<V extends Vue, T> {
 	get loading() { return this._loading }
 	get error() { return this._error }
 
+	readonly refresh: () => void
+
 	constructor(
 		readonly vm: V,
 		readonly errorHandler: ErrorHandler | undefined,
 		readonly fn: AsyncDataFunc<V, T>,
 		readonly defaultValue: T | null = null,
-	) {}
-
-	refresh() {
-		const { errorHandler } = this
-		this._loading = true
-		this._promise = this.fn.call(this.vm)
-			.then(v => {
-				this._error = null
-				return this._value = v
-			})
-			.catch(e => {
-				if (errorHandler) errorHandler(e)
-				this._error = e
-				return this._value = this.defaultValue
-			})
-			.finally(() => {
-				this._loading = false
-			})
+	) {
+		this.refresh = () => {
+			const { errorHandler } = this
+			this._loading = true
+			this._promise = this.fn.call(this.vm)
+				.then(v => {
+					this._error = null
+					return this._value = v
+				})
+				.catch(e => {
+					if (errorHandler) errorHandler(e)
+					this._error = e
+					return this._value = this.defaultValue
+				})
+				.finally(() => {
+					this._loading = false
+				})
+		}
 	}
 }
 
