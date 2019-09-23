@@ -134,7 +134,7 @@ The class that is returned by the `VueAsync` function. Has a `data` function to 
 The full options object has this shape:
 
 ```ts
-interface AsyncDataOptions<T> = {
+type AsyncDataOptions<T> = {
   // the asynchronous function
   // that is called just once on component creation
   get: (this: V) => Promise<T>,
@@ -165,7 +165,7 @@ This is (basically) what is returned from the `data` function, and is the object
 The types of the properties of `AsyncData` depend on what values you give for `default` and `lazy`.
 
 ```ts
-interface AsyncData<T> = {
+type AsyncData<T> = {
   // the raw promise returned by your asynchronous function
   // can be useful if you'd prefer to have other computed properties
   // use `await` to depend on this
@@ -200,7 +200,7 @@ You have to provide a `get` function that returns a promise, and either a `watch
 You might be asking "Why are `watch` and `watchClosely` necessary? Why not just pass a function that's reactively watched?" Well, in order for Vue to reactively track a function, it has to invoke that function when you create the watcher. Since we have a function that performs an expensive async operation, which we also want to debounce, we can't really do that.
 
 ```ts
-interface AsyncComputedOptions<T> = {
+type AsyncComputedOptions<T> = {
   // the asynchronous function,
   // that will be called without debouncing when `watchClosely` is triggered
   // and with debouncing when `watch` is triggered
@@ -246,7 +246,7 @@ This is (basically) what is returned from the `computed` function, and is the ob
 The types of the properties of `AsyncComputed` depend on what values you give for `default`, `eager`, `watch`, and `watchClosely`.
 
 ```ts
-interface AsyncComputed<T> = {
+type AsyncComputed<T> = {
   // same as `AsyncData`
   // if you *don't* set `eager`, then this could be null
   // and if you don't give a default, the internal value could be null
