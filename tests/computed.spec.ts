@@ -46,8 +46,8 @@ describe('computed', () => {
 		expect(m.vm.computed.loading).false
 		expect(m.vm.computed.queued).false
 	})
-	it('(eager: true, defaulted: true, debounced: true) with watch_closely', async () => {
-		const error_handler = sinon.spy()
+	it('(eager: true, defaulted: true, debounced: true) with watchClosely', async () => {
+		const errorHandler = sinon.spy()
 
 		@Component({ render(h) { return h('div', ['hello']) } })
 		class A extends Vue {
@@ -55,12 +55,12 @@ describe('computed', () => {
 			@async.Computed
 			computed = async.computed(this, {
 				watch: ['num'],
-				watch_closely: ['yes'],
+				watchClosely: ['yes'],
 				async get({ num, yes }) {
 					if (!yes) throw new Error('e')
 					return await delay(25, num + 1)
 				},
-				error: error_handler,
+				error: errorHandler,
 				default: 0,
 				eager: true,
 			})
@@ -88,7 +88,7 @@ describe('computed', () => {
 
 		m.setData({ yes: false })
 		await m.vm.computed.promise
-		expect(error_handler.calledOnce).true
+		expect(errorHandler.calledOnce).true
 		expect(m.vm.computed.error!.message).eql('e')
 	})
 
@@ -125,14 +125,14 @@ describe('computed', () => {
 		expect(m.vm.computed.loading).false
 		expect(m.vm.computed.queued).false
 	})
-	it('(eager: true, defaulted: false, debounced: true) with watch_closely', async () => {
+	it('(eager: true, defaulted: false, debounced: true) with watchClosely', async () => {
 		@Component({ render(h) { return h('div', ['hello']) } })
 		class A extends Vue {
 			num = 1; yes = true
 			@async.Computed
 			computed = async.computed(this, {
 				watch: ['num'],
-				watch_closely: ['yes'],
+				watchClosely: ['yes'],
 				async get({ num, yes }) { return await delay(25, yes ? num + 1 : 4) },
 				eager: true,
 			})
@@ -204,14 +204,14 @@ describe('computed', () => {
 		expect(m.vm.computed.queued).false
 		expect(m.vm.computed.value).eql(3)
 	})
-	it('(eager: false, defaulted: true, debounced: true) with watch_closely', async () => {
+	it('(eager: false, defaulted: true, debounced: true) with watchClosely', async () => {
 		@Component({ render(h) { return h('div', ['hello']) } })
 		class A extends Vue {
 			num = 1; yes = true
 			@async.Computed
 			computed = async.computed(this, {
 				watch: ['num'],
-				watch_closely: ['yes'],
+				watchClosely: ['yes'],
 				async get({ num, yes }) { return await delay(25, yes ? num + 1 : 4) },
 				default: 0,
 			})
@@ -288,14 +288,14 @@ describe('computed', () => {
 		expect(m.vm.computed.queued).false
 		expect(m.vm.computed.value).eql(3)
 	})
-	it('(eager: false, defaulted: false, debounced: true) with watch_closely', async () => {
+	it('(eager: false, defaulted: false, debounced: true) with watchClosely', async () => {
 		@Component({ render(h) { return h('div', ['hello']) } })
 		class A extends Vue {
 			num = 1; yes = true
 			@async.Computed
 			computed = async.computed(this, {
 				watch: ['num'],
-				watch_closely: ['yes'],
+				watchClosely: ['yes'],
 				async get({ num, yes }) { return await delay(25, yes ? num + 1 : 4) },
 			})
 		}
@@ -330,19 +330,19 @@ describe('computed', () => {
 
 
 	it('(eager: true, defaulted: true, debounced: false)', async () => {
-		const error_handler = sinon.spy()
+		const errorHandler = sinon.spy()
 
 		@Component({ render(h) { return h('div', ['hello']) } })
 		class A extends Vue {
 			num = 1; yes = true
 			@async.Computed
 			computed = async.computed(this, {
-				watch_closely: ['num'],
+				watchClosely: ['num'],
 				async get({ num }) {
 					if (num === 10) throw new Error('e')
 					return await delay(25, num + 1)
 				},
-				error: error_handler,
+				error: errorHandler,
 				default: 0,
 				eager: true,
 			})
@@ -374,9 +374,59 @@ describe('computed', () => {
 
 		m.setData({ num: 10 })
 		await m.vm.computed.promise
-		expect(error_handler.calledOnce).true
+		expect(errorHandler.calledOnce).true
 		expect(m.vm.computed.error!.message).eql('e')
 	})
+
+	it('(eager: true, defaulted: true, debounced: false) testing watchClosely as a function', async () => {
+		const errorHandler = sinon.spy()
+
+		@Component({ render(h) { return h('div', ['hello']) } })
+		class A extends Vue {
+			num = 1; yes = true
+			@async.Computed
+			computed = async.computed(this, {
+				watchClosely() { return { other: this.num } },
+				async get({ other }) {
+					if (other === 10) throw new Error('e')
+					return await delay(25, other + 1)
+				},
+				error: errorHandler,
+				default: 0,
+				eager: true,
+			})
+		}
+		const a = new A()
+
+		type T = number
+		const v: T = a.computed.value
+		const p: Promise<T> = a.computed.promise
+		const l: boolean = a.computed.loading
+		const e: Error | null = a.computed.error
+
+		const m = shallowMount(A)
+		expect(m.vm.num).eql(1)
+		expect(m.vm.computed.promise).a('promise')
+		expect(m.vm.computed.value).eql(0)
+		expect(m.vm.computed.loading).true
+
+		await m.vm.computed.promise
+		expect(m.vm.computed.value).eql(2)
+		expect(m.vm.computed.loading).false
+
+		m.setData({ num: 2 })
+		expect(m.vm.computed.loading).true
+
+		await m.vm.computed.promise
+		expect(m.vm.computed.value).eql(3)
+		expect(m.vm.computed.loading).false
+
+		m.setData({ num: 10 })
+		await m.vm.computed.promise
+		expect(errorHandler.calledOnce).true
+		expect(m.vm.computed.error!.message).eql('e')
+	})
+
 
 	it('(eager: true, defaulted: false, debounced: false)', async () => {
 		@Component({ render(h) { return h('div', ['hello']) } })
@@ -384,7 +434,7 @@ describe('computed', () => {
 			num = 1; yes = true
 			@async.Computed
 			computed = async.computed(this, {
-				watch_closely: ['num'],
+				watchClosely: ['num'],
 				async get({ num }) { return await delay(25, num + 1) },
 				eager: true,
 			})
@@ -421,7 +471,7 @@ describe('computed', () => {
 			num = 1; yes = true
 			@async.Computed
 			computed = async.computed(this, {
-				watch_closely: ['num'],
+				watchClosely: ['num'],
 				async get({ num }) { return await delay(25, num + 1) },
 				default: 0,
 			})
@@ -455,7 +505,7 @@ describe('computed', () => {
 			num = 1; yes = true
 			@async.Computed
 			computed = async.computed(this, {
-				watch_closely: ['num'],
+				watchClosely: ['num'],
 				async get({ num }) { return await delay(25, num + 1) },
 			})
 		}

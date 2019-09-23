@@ -24,7 +24,7 @@ export type OptionsLazy = {
 
 export class Data {
 	constructor(
-		protected readonly error_handler: ErrorHandler | undefined,
+		protected readonly errorHandler: ErrorHandler | undefined,
 	) {}
 
 	// (defaulted: false, lazy: false) just function
@@ -42,23 +42,23 @@ export class Data {
 		opts: any,
 	): any {
 
-		const { error_handler: error_handler_default } = this
+		const { errorHandler: errorHandlerDefault } = this
 
-		const { def, fn, lazy, error_handler = error_handler_default } = typeof opts === 'function'
+		const { def, fn, lazy, errorHandler = errorHandlerDefault } = typeof opts === 'function'
 			? { fn: opts, def: undefined, lazy: false }
-			: { fn: opts.get, def: opts.default, lazy: opts.lazy || false, error_handler: opts.error }
+			: { fn: opts.get, def: opts.default, lazy: opts.lazy || false, errorHandler: opts.error }
 
 		if (def === undefined) {
 			if (lazy)
-				return new AsyncDataLazyNoDefault(vm, error_handler, fn, undefined)
+				return new AsyncDataLazyNoDefault(vm, errorHandler, fn, undefined)
 			else
-				return new AsyncDataNoDefault(vm, error_handler, fn, undefined)
+				return new AsyncDataNoDefault(vm, errorHandler, fn, undefined)
 		}
 		else {
 			if (lazy)
-				return new AsyncDataLazy(vm, error_handler, fn, def)
+				return new AsyncDataLazy(vm, errorHandler, fn, def)
 			else
-				return new AsyncData(vm, error_handler, fn, def)
+				return new AsyncData(vm, errorHandler, fn, def)
 		}
 	}
 }
@@ -77,13 +77,13 @@ class AsyncDataLazyNoDefault<V extends Vue, T> {
 
 	constructor(
 		readonly vm: V,
-		readonly error_handler: ErrorHandler | undefined,
+		readonly errorHandler: ErrorHandler | undefined,
 		readonly fn: AsyncDataFunc<V, T>,
-		readonly default_value: T | null = null,
+		readonly defaultValue: T | null = null,
 	) {}
 
 	refresh() {
-		const { error_handler } = this
+		const { errorHandler } = this
 		this._loading = true
 		this._promise = this.fn.call(this.vm)
 			.then(v => {
@@ -91,9 +91,9 @@ class AsyncDataLazyNoDefault<V extends Vue, T> {
 				return this._value = v
 			})
 			.catch(e => {
-				if (error_handler) error_handler(e)
+				if (errorHandler) errorHandler(e)
 				this._error = e
-				return this._value = this.default_value
+				return this._value = this.defaultValue
 			})
 			.finally(() => {
 				this._loading = false
@@ -106,11 +106,11 @@ class AsyncDataNoDefault<V extends Vue, T> extends AsyncDataLazyNoDefault<V, T> 
 
 	constructor(
 		readonly vm: V,
-		readonly error_handler: ErrorHandler | undefined,
+		readonly errorHandler: ErrorHandler | undefined,
 		readonly fn: AsyncDataFunc<V, T>,
-		readonly default_value: T | null = null,
+		readonly defaultValue: T | null = null,
 	) {
-		super(vm, error_handler, fn, default_value)
+		super(vm, errorHandler, fn, defaultValue)
 		this.refresh()
 	}
 
@@ -124,12 +124,12 @@ class AsyncDataLazy<V extends Vue, T> extends AsyncDataLazyNoDefault<V, T> {
 
 	constructor(
 		readonly vm: V,
-		readonly error_handler: ErrorHandler | undefined,
+		readonly errorHandler: ErrorHandler | undefined,
 		readonly fn: AsyncDataFunc<V, T>,
-		readonly default_value: T,
+		readonly defaultValue: T,
 	) {
-		super(vm, error_handler, fn, default_value)
-		this._value = default_value
+		super(vm, errorHandler, fn, defaultValue)
+		this._value = defaultValue
 	}
 
 	get promise() { return this._promise }
@@ -142,12 +142,12 @@ class AsyncData<V extends Vue, T> extends AsyncDataLazy<V, T> {
 
 	constructor(
 		readonly vm: V,
-		readonly error_handler: ErrorHandler | undefined,
+		readonly errorHandler: ErrorHandler | undefined,
 		readonly fn: AsyncDataFunc<V, T>,
-		readonly default_value: T,
+		readonly defaultValue: T,
 	) {
-		super(vm, error_handler, fn, default_value)
-		this._value = default_value
+		super(vm, errorHandler, fn, defaultValue)
+		this._value = defaultValue
 		this.refresh()
 	}
 

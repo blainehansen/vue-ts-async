@@ -3,25 +3,23 @@ import _debounce from 'lodash.debounce'
 import { createDecorator } from 'vue-class-component'
 
 import { Data } from './data'
-import { Overwrite, RequireDistinctIntersection, TupleUnion, ErrorHandler, pick, to_array } from './utils'
+import { Overwrite, RequireDistinctIntersection, TupleUnion, ErrorHandler, pick, toArray } from './utils'
 
-const ComputedDecorator = createDecorator((component_options, key) => {
-	const existing_created = component_options.created
-	component_options.created = function() {
+const ComputedDecorator = createDecorator((componentOptions, key) => {
+	const existingCreated = componentOptions.created
+	componentOptions.created = function() {
 		const computed = (this as any)[key] as AsyncComputedlike
 		(computed as any).vm = this
-		computed.initialize_watches()
-		if (existing_created)
-			existing_created()
+		computed.initializeWatches()
+		if (existingCreated)
+			existingCreated()
 	}
 })
 
 
 interface AsyncComputedlike {
-	initialize_watches(): void
+	initializeWatches(): void
 }
-
-
 
 
 type Watcher<V> = (keyof V)[] | ((this: V) => any)
@@ -31,7 +29,6 @@ type WatcherOutput<V, W extends Watcher<V>> =
 	: [W] extends [(keyof V)[]] ? Pick<V, TupleUnion<W>>
 	: never
 
-
 type WatcherFunction<V, W extends Watcher<V>> =
 	W extends []
 		? (this: V) => never
@@ -39,7 +36,7 @@ type WatcherFunction<V, W extends Watcher<V>> =
 
 
 type AsyncFunc<I, T> =
-	(watched_attributes: I) => Promise<T>
+	(watchedAttributes: I) => Promise<T>
 
 type AsyncFuncSingle<V extends Vue, T, W extends Watcher<V>> =
 	AsyncFunc<WatcherOutput<V, W>, T>
@@ -51,6 +48,7 @@ type AsyncFuncDistinct<V extends Vue, T, WW extends Watcher<V>, WC extends Watch
 type OptionsGet<I, T> = {
 	get: AsyncFunc<I, T>,
 	error?: ErrorHandler,
+	deep?: boolean,
 }
 
 type OptionsGetSingle<V extends Vue, T, W extends Watcher<V>> =
@@ -64,41 +62,8 @@ type OptionsWatch<V extends Vue, WW extends Watcher<V>> = {
 	watch: WW,
 }
 type OptionsWatchClosely<V extends Vue, WC extends Watcher<V>> = {
-	watch_closely: WC,
+	watchClosely: WC,
 }
-
-
-
-
-// type AsyncFunc<V extends Vue, T, K extends keyof V> =
-// 	(watched_attributes: Pick<V, K>) => Promise<T>
-
-// type AsyncFuncSingle<V extends Vue, T, KC extends (keyof V)[]> =
-// 	AsyncFunc<V, T, TupleUnion<KC>>
-
-// type AsyncFuncDistinct<V extends Vue, T, KW extends (keyof V)[], KC extends (keyof V)[]> =
-// 	AsyncFunc<V, T, RequireDistinct<TupleUnion<KW>, TupleUnion<KC>>>
-
-
-// type OptionsGet<V extends Vue, T, K extends keyof V> = {
-// 	get: AsyncFunc<V, T, K>,
-// 	error?: ErrorHandler,
-// }
-
-// type OptionsGetSingle<V extends Vue, T, KC extends (keyof V)[]> =
-// 	OptionsGet<V, T, TupleUnion<KC>>
-
-// type OptionsGetDistinct<V extends Vue, T, KW extends (keyof V)[], KC extends (keyof V)[]> =
-// 	OptionsGet<V, T, RequireDistinct<TupleUnion<KW>, TupleUnion<KC>>>
-
-// type PickFunction<V extends Vue, K extends (keyof V)[]> = (this: V) => Pick<V, TupleUnion<K>>
-
-// type OptionsWatch<V extends Vue, KW extends (keyof V)[]> = {
-// 	watch: KW | PickFunction<V, KW>,
-// }
-// type OptionsWatchClosely<V extends Vue, KC extends (keyof V)[]> = {
-// 	watch_closely: KC | PickFunction<V, KC>,
-// }
 
 
 type OptionsEager = {
@@ -115,9 +80,9 @@ type OptionsDebounce = {
 export class Computed extends Data {
 	constructor(
 		readonly debounce: number,
-		readonly error_handler: ErrorHandler | undefined,
+		readonly errorHandler: ErrorHandler | undefined,
 	) {
-		super(error_handler)
+		super(errorHandler)
 	}
 
 	Computed = ComputedDecorator
@@ -230,71 +195,72 @@ export class Computed extends Data {
 		vm: V,
 		options: any,
 	): any {
-		const { error_handler: error_handler_default, debounce: debounce_default } = this
+		const { errorHandler: errorHandlerDefault, debounce: debounceDefault } = this
 
 		const {
 			get: fn,
-			error: error_handler = error_handler_default,
-			watch: watch_opt = undefined,
-			watch_closely: watch_closely_opt = undefined,
+			error: errorHandler = errorHandlerDefault,
+			watch: watchOpt = undefined,
+			watchClosely: watchCloselyOpt = undefined,
 			eager = false,
 			default: def = undefined,
-			debounce: debounce_opt = debounce_default,
+			debounce: debounceOpt = debounceDefault,
+			deep = true,
 		} = options
 
-		const debounce = watch_opt === undefined
+		const debounce = watchOpt === undefined
 			? undefined
-			: debounce_opt
+			: debounceOpt
 
 		// actually means it's an array
-		const watch = typeof watch_opt === 'object'
-			? function(this: V) { return pick(this, watch_opt) }
-			: watch_opt
+		const watch = typeof watchOpt === 'object'
+			? function(this: V) { return pick(this, watchOpt) }
+			: watchOpt
 
-		const watch_closely = typeof watch_closely_opt === 'object'
-			? function(this: V) { return pick(this, watch_closely_opt) }
-			: watch_closely_opt
+		const watchClosely = typeof watchCloselyOpt === 'object'
+			? function(this: V) { return pick(this, watchCloselyOpt) }
+			: watchCloselyOpt
 
 		// (eager: true, defaulted: true, debounced: true)
 		if (eager && def !== undefined && debounce !== undefined)
-			return new AsyncComputed(vm, error_handler, watch, watch_closely, fn, debounce, def)
+			return new AsyncComputed(vm, errorHandler, watch, watchClosely, fn, debounce, def, deep)
 
 		// (eager: true, defaulted: false, debounced: true)
 		else if (eager && def === undefined && debounce !== undefined)
-			return new AsyncComputedNoDefault(vm, error_handler, watch, watch_closely, fn, debounce, def)
+			return new AsyncComputedNoDefault(vm, errorHandler, watch, watchClosely, fn, debounce, def, deep)
 
 		// (eager: false, defaulted: true, debounced: true)
 		else if (!eager && def !== undefined && debounce !== undefined)
-			return new AsyncComputedNotEager(vm, error_handler, watch, watch_closely, fn, debounce, def)
+			return new AsyncComputedNotEager(vm, errorHandler, watch, watchClosely, fn, debounce, def, deep)
 
 		// (eager: false, defaulted: false, debounced: true)
 		else if (!eager && def === undefined && debounce !== undefined)
-			return new AsyncComputedNotEagerNoDefault(vm, error_handler, watch, watch_closely, fn, debounce, def)
+			return new AsyncComputedNotEagerNoDefault(vm, errorHandler, watch, watchClosely, fn, debounce, def, deep)
 
 		// (eager: true, defaulted: true, debounced: false)
 		else if (eager && def !== undefined && debounce === undefined)
-			return new AsyncComputedNoDebounce(vm, error_handler, watch_closely, fn, def)
+			return new AsyncComputedNoDebounce(vm, errorHandler, watchClosely, fn, def, deep)
 
 		// (eager: true, defaulted: false, debounced: false)
 		else if (eager && def === undefined && debounce === undefined)
-			return new AsyncComputedNoDefaultNoDebounce(vm, error_handler, watch_closely, fn, def)
+			return new AsyncComputedNoDefaultNoDebounce(vm, errorHandler, watchClosely, fn, def, deep)
 
 		// (eager: false, defaulted: true, debounced: false)
 		else if (!eager && def !== undefined && debounce === undefined)
-			return new AsyncComputedNotEagerNoDebounce(vm, error_handler, watch_closely, fn, def)
+			return new AsyncComputedNotEagerNoDebounce(vm, errorHandler, watchClosely, fn, def, deep)
 
 		// (eager: false, defaulted: false, debounced: false)
 		else if (!eager && def === undefined && debounce === undefined)
-			return new AsyncComputedNotEagerNoDefaultNoDebounce(vm, error_handler, watch_closely, fn, def)
+			return new AsyncComputedNotEagerNoDefaultNoDebounce(vm, errorHandler, watchClosely, fn, def, deep)
 
 		throw new Error(
 			"Somehow the options to async.computed were invalid, and didn't match any actual cases:"
 			+ `\n  get: ${fn}`
-			+ `\n  watch: ${watch_opt}`
-			+ `\n  watch_closely: ${watch_closely}`
+			+ `\n  watch: ${watchOpt}`
+			+ `\n  watchClosely: ${watchClosely}`
 			+ `\n  eager: ${eager}`
 			+ `\n  default: ${def}`
-			+ `\n  debounce: ${debounce_opt}`
+			+ `\n  debounce: ${debounceOpt}`
 		)
 	}
 }
@@ -317,49 +283,45 @@ class AsyncComputedNotEagerNoDefaultNoDebounce<V extends Vue, T, WC extends Watc
 
 	constructor(
 		readonly vm: V,
-		readonly error_handler: ErrorHandler | undefined,
-		readonly watch_closely: WatcherFunction<V, WC> | undefined,
+		readonly errorHandler: ErrorHandler | undefined,
+		readonly watchClosely: WatcherFunction<V, WC> | undefined,
 		readonly fn: AsyncFuncSingle<V, T, WC>,
-		readonly default_value: T | null = null
+		readonly defaultValue: T | null = null,
+		readonly deep = true,
 	) {}
 
-	initialize_watches() {
-		const { vm, watch_closely } = this
+	initializeWatches() {
+		const { vm, watchClosely, deep } = this
 
-		if (watch_closely !== undefined)
+		if (watchClosely !== undefined)
 			vm.$watch(
-				watch_closely,
-				() => { this.immediate_handler() },
-				{ deep: true, immediate: false },
+				watchClosely,
+				() => { this.immediateHandler() },
+				{ deep, immediate: false },
 			)
-
-		// if (watch_closely.length > 0)
-		// 	vm.$watch(
-		// 		function() { return pick(this, watch_closely) },
-		// 		() => { this.immediate_handler() },
-		// 		{ deep: true, immediate: false },
-		// 	)
 	}
 
-	protected immediate_handler() {
-		const { vm, error_handler, watch_closely, default_value } = this
+	protected immediateHandler() {
+		const { vm, errorHandler, watchClosely, defaultValue } = this
 		this._loading = true
 
-		return this._promise = this.fn({
-			...((watch_closely && watch_closely.call(vm)) || {})
+		const promise = this._promise = this.fn({
+			...((watchClosely && watchClosely.call(vm)) || {})
 		})
 			.then(v => {
 				this._error = null
 				return this._value = v
 			})
 			.catch(e => {
-				if (error_handler) error_handler(e)
+				if (errorHandler) errorHandler(e)
 				this._error = e
-				return this._value = default_value
+				return this._value = defaultValue
 			})
 			.finally(() => {
 				this._loading = false
 			})
+
+		return promise
 	}
 }
 
@@ -372,13 +334,14 @@ class AsyncComputedNotEagerNoDebounce<V extends Vue, T, WC extends Watcher<V>> e
 
 	constructor(
 		readonly vm: V,
-		readonly error_handler: ErrorHandler | undefined,
-		readonly watch_closely: WatcherFunction<V, WC> | undefined,
+		readonly errorHandler: ErrorHandler | undefined,
+		readonly watchClosely: WatcherFunction<V, WC> | undefined,
 		readonly fn: AsyncFuncSingle<V, T, WC>,
-		readonly default_value: T,
+		readonly defaultValue: T,
+		readonly deep = true,
 	) {
-		super(vm, error_handler, watch_closely, fn, default_value)
-		this._value = default_value
+		super(vm, errorHandler, watchClosely, fn, defaultValue, deep)
+		this._value = defaultValue
 	}
 }
 
@@ -391,14 +354,15 @@ class AsyncComputedNoDefaultNoDebounce<V extends Vue, T, WC extends Watcher<V>> 
 
 	constructor(
 		readonly vm: V,
-		readonly error_handler: ErrorHandler | undefined,
-		readonly watch_closely: WatcherFunction<V, WC> | undefined,
+		readonly errorHandler: ErrorHandler | undefined,
+		readonly watchClosely: WatcherFunction<V, WC> | undefined,
 		readonly fn: AsyncFuncSingle<V, T, WC>,
-		readonly default_value: T | null = null,
+		readonly defaultValue: T | null = null,
+		readonly deep = true,
 	) {
-		super(vm, error_handler, watch_closely, fn, default_value)
-		// calling immediate_handler is the simplest way to be eager
-		this.immediate_handler()
+		super(vm, errorHandler, watchClosely, fn, defaultValue, deep)
+		// calling immediateHandler is the simplest way to be eager
+		this.immediateHandler()
 	}
 }
 
@@ -411,14 +375,15 @@ class AsyncComputedNoDebounce<V extends Vue, T, WC extends Watcher<V>> extends A
 
 	constructor(
 		readonly vm: V,
-		readonly error_handler: ErrorHandler | undefined,
-		readonly watch_closely: WatcherFunction<V, WC> | undefined,
+		readonly errorHandler: ErrorHandler | undefined,
+		readonly watchClosely: WatcherFunction<V, WC> | undefined,
 		readonly fn: AsyncFuncSingle<V, T, WC>,
-		readonly default_value: T,
+		readonly defaultValue: T,
+		readonly deep = true,
 	) {
-		super(vm, error_handler, watch_closely, fn, default_value)
-		this.immediate_handler()
-		this._value = default_value
+		super(vm, errorHandler, watchClosely, fn, defaultValue, deep)
+		this.immediateHandler()
+		this._value = defaultValue
 	}
 }
 
@@ -440,27 +405,37 @@ class AsyncComputedNotEagerNoDefault<V extends Vue, T, WW extends Watcher<V>, WC
 	protected _queued = false
 	get queued() { return this._queued }
 
-	protected debounced_fn: ReturnType<typeof _debounce>
+	protected readonly debouncedFn: ReturnType<typeof _debounce>
+	readonly cancel: () => void
+	readonly now: () => void
 
 	constructor(
 		readonly vm: V,
-		readonly error_handler: ErrorHandler | undefined,
+		readonly errorHandler: ErrorHandler | undefined,
 		readonly watch: WatcherFunction<V, WW> | undefined,
-		readonly watch_closely: WatcherFunction<V, WC> | undefined,
+		readonly watchClosely: WatcherFunction<V, WC> | undefined,
 		readonly fn: AsyncFuncDistinct<V, T, WW, WC>,
 		readonly debounce: number,
-		readonly default_value: T | null = null,
+		readonly defaultValue: T | null = null,
+		readonly deep = true,
 	) {
-		this.debounced_fn = _debounce(() => { this.immediate_handler() }, debounce)
+		this.debouncedFn = _debounce(() => { this.immediateHandler() }, debounce)
+		this.cancel = () => {
+			this._queued = false
+			this.debouncedFn.cancel()
+		}
+		this.now = () => {
+			this.debouncedFn.flush()
+		}
 	}
 
-	initialize_watches() {
-		const { vm, watch, watch_closely } = this
-		if (watch_closely !== undefined) {
+	initializeWatches() {
+		const { vm, watch, watchClosely, deep } = this
+		if (watchClosely !== undefined) {
 			vm.$watch(
-				watch_closely,
-				() => { this.immediate_handler() },
-				{ deep: true, immediate: false },
+				watchClosely,
+				() => { this.immediateHandler() },
+				{ deep, immediate: false },
 			)
 		}
 
@@ -469,20 +444,20 @@ class AsyncComputedNotEagerNoDefault<V extends Vue, T, WW extends Watcher<V>, WC
 				watch,
 				() => {
 					this._queued = true
-					this.debounced_fn()
+					this.debouncedFn()
 				},
-				{ deep: true, immediate: false }
+				{ deep, immediate: false }
 			)
 		}
 	}
 
-	protected immediate_handler() {
-		const { vm, error_handler, watch, watch_closely, default_value } = this
-		this._cancel()
+	protected immediateHandler() {
+		const { vm, errorHandler, watch, watchClosely, defaultValue } = this
+		this.cancel()
 		this._loading = true
 
-		return this._promise = this.fn({
-			...((watch_closely && watch_closely.call(vm)) || {}),
+		const promise = this._promise = this.fn({
+			...((watchClosely && watchClosely.call(vm)) || {}),
 			...((watch && watch.call(vm)) || {}),
 		})
 			.then(v => {
@@ -490,25 +465,16 @@ class AsyncComputedNotEagerNoDefault<V extends Vue, T, WW extends Watcher<V>, WC
 				return this._value = v
 			})
 			.catch(e => {
-				if (error_handler) error_handler(e)
+				if (errorHandler) errorHandler(e)
 				this._error = e
-				return this._value = default_value
+				return this._value = defaultValue
 			})
 			.finally(() => {
 				this._loading = false
 			})
-	}
 
-	protected _cancel() {
-		this._queued = false
-		this.debounced_fn.cancel()
+		return promise
 	}
-	get cancel() { return this._cancel.bind(this) }
-
-	protected _now() {
-		this.debounced_fn.flush()
-	}
-	get now() { return this._now.bind(this) }
 }
 
 // (eager: false, defaulted: true, debounced: true)
@@ -520,15 +486,16 @@ class AsyncComputedNotEager<V extends Vue, T, WW extends Watcher<V>, WC extends 
 
 	constructor(
 		readonly vm: V,
-		readonly error_handler: ErrorHandler | undefined,
+		readonly errorHandler: ErrorHandler | undefined,
 		readonly watch: WatcherFunction<V, WW> | undefined,
-		readonly watch_closely: WatcherFunction<V, WC> | undefined,
+		readonly watchClosely: WatcherFunction<V, WC> | undefined,
 		readonly fn: AsyncFuncDistinct<V, T, WW, WC>,
 		readonly debounce: number,
-		readonly default_value: T,
+		readonly defaultValue: T,
+		readonly deep = true,
 	) {
-		super(vm, error_handler, watch, watch_closely, fn, debounce, default_value)
-		this._value = default_value
+		super(vm, errorHandler, watch, watchClosely, fn, debounce, defaultValue, deep)
+		this._value = defaultValue
 	}
 }
 
@@ -541,15 +508,16 @@ class AsyncComputedNoDefault<V extends Vue, T, WW extends Watcher<V>, WC extends
 
 	constructor(
 		readonly vm: V,
-		readonly error_handler: ErrorHandler | undefined,
+		readonly errorHandler: ErrorHandler | undefined,
 		readonly watch: WatcherFunction<V, WW> | undefined,
-		readonly watch_closely: WatcherFunction<V, WC> | undefined,
+		readonly watchClosely: WatcherFunction<V, WC> | undefined,
 		readonly fn: AsyncFuncDistinct<V, T, WW, WC>,
 		readonly debounce: number,
-		readonly default_value: T | null = null,
+		readonly defaultValue: T | null = null,
+		readonly deep = true,
 	) {
-		super(vm, error_handler, watch, watch_closely, fn, debounce, default_value)
-		this.immediate_handler()
+		super(vm, errorHandler, watch, watchClosely, fn, debounce, defaultValue, deep)
+		this.immediateHandler()
 	}
 }
 
@@ -563,15 +531,16 @@ class AsyncComputed<V extends Vue, T, WW extends Watcher<V>, WC extends Watcher<
 
 	constructor(
 		readonly vm: V,
-		readonly error_handler: ErrorHandler | undefined,
+		readonly errorHandler: ErrorHandler | undefined,
 		readonly watch: WatcherFunction<V, WW> | undefined,
-		readonly watch_closely: WatcherFunction<V, WC> | undefined,
+		readonly watchClosely: WatcherFunction<V, WC> | undefined,
 		readonly fn: AsyncFuncDistinct<V, T, WW, WC>,
 		readonly debounce: number,
-		readonly default_value: T,
+		readonly defaultValue: T,
+		readonly deep = true,
 	) {
-		super(vm, error_handler, watch, watch_closely, fn, debounce, default_value)
-		this._value = default_value
-		this.immediate_handler()
+		super(vm, errorHandler, watch, watchClosely, fn, debounce, defaultValue, deep)
+		this._value = defaultValue
+		this.immediateHandler()
 	}
 }
