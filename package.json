@@ -3,7 +3,9 @@
 	"version": "0.1.0",
 	"description": "",
 	"main": "dist/index.js",
-	"files": ["dist/*"],
+	"files": [
+		"dist/*"
+	],
 	"scripts": {
 		"test": "mocha --recursive -r ts-node/register -r tests/setup tests/**/*.spec.ts tests/**/**/*.spec.ts",
 		"build": "rm -Rf dist/* && tsc -p tsconfig.json",
