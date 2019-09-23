@@ -2,14 +2,13 @@
 	"name": "vue-ts-async",
 	"version": "0.1.0",
 	"description": "",
-	"main": "dist/index.ts",
-	"directories": {
-		"lib": "lib"
-	},
+	"main": "dist/index.js",
+	"files": ["dist/*"],
 	"scripts": {
-		"main": "ts-node ./main.ts",
 		"test": "mocha --recursive -r ts-node/register -r tests/setup tests/**/*.spec.ts tests/**/**/*.spec.ts",
-		"build": "rm -Rf dist/* && tsc -p tsconfig.json"
+		"build": "rm -Rf dist/* && tsc -p tsconfig.json",
+		"preversion": "npm run build && npm test",
+		"postversion": "git push origin master && git push origin master --tags && npm publish"
 	},
 	"repository": {
 		"type": "git",
