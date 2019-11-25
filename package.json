@@ -30,16 +30,15 @@
 		"lodash.debounce": "^4.0.8"
 	},
 	"devDependencies": {
-		"@types/bluebird": "^3.5.27",
+		"@ts-std/extensions": "^1.0.10",
 		"@types/chai": "^4.2.0",
 		"@types/lodash.debounce": "^4.0.6",
 		"@types/mocha": "^5.2.7",
 		"@types/node": "^12.7.2",
 		"@types/sinon": "^7.0.13",
 		"@vue/test-utils": "^1.0.0-beta.29",
-		"bluebird": "^3.5.5",
 		"chai": "^4.2.0",
-		"handlebars": "^4.2.0",
+		"handlebars": "^4.5.3",
 		"jsdom": "^15.1.1",
 		"jsdom-global": "^3.0.2",
 		"mocha": "^6.2.0",

@@ -2,7 +2,7 @@ import 'mocha'
 import Vue from 'vue'
 import sinon from 'sinon'
 import { expect } from 'chai'
-import { delay } from 'bluebird'
+import '@ts-std/extensions/dist/promise'
 import Component from 'vue-class-component'
 import { shallowMount } from '@vue/test-utils'
 
@@ -20,7 +20,7 @@ describe('computed', () => {
 			@async.Computed
 			computed = async.computed(this, {
 				watch: ['num'],
-				async get({ num }) { return await delay(25, num + 1) },
+				async get({ num }) { return await Promise.delay(25, num + 1) },
 				default: 0,
 				eager: true,
 			})
@@ -58,7 +58,7 @@ describe('computed', () => {
 				watchClosely: ['yes'],
 				async get({ num, yes }) {
 					if (!yes) throw new Error('e')
-					return await delay(25, num + 1)
+					return await Promise.delay(25, num + 1)
 				},
 				error: errorHandler,
 				default: 0,
@@ -100,7 +100,7 @@ describe('computed', () => {
 			@async.Computed
 			computed = async.computed(this, {
 				watch: ['num'],
-				async get({ num }) { return await delay(25, num + 1) },
+				async get({ num }) { return await Promise.delay(25, num + 1) },
 				eager: true,
 			})
 		}
@@ -133,7 +133,7 @@ describe('computed', () => {
 			computed = async.computed(this, {
 				watch: ['num'],
 				watchClosely: ['yes'],
-				async get({ num, yes }) { return await delay(25, yes ? num + 1 : 4) },
+				async get({ num, yes }) { return await Promise.delay(25, yes ? num + 1 : 4) },
 				eager: true,
 			})
 		}
@@ -167,7 +167,7 @@ describe('computed', () => {
 			@async.Computed
 			computed = async.computed(this, {
 				watch: ['num'],
-				async get({ num }) { return await delay(25, num + 1) },
+				async get({ num }) { return await Promise.delay(25, num + 1) },
 				default: 0,
 			})
 		}
@@ -193,7 +193,7 @@ describe('computed', () => {
 		expect(m.vm.computed.queued).true
 		expect(m.vm.computed.value).eql(0)
 
-		await delay(25)
+		await Promise.delay(25)
 		expect(m.vm.computed.promise).a('promise')
 		expect(m.vm.computed.loading).true
 		expect(m.vm.computed.queued).false
@@ -212,7 +212,7 @@ describe('computed', () => {
 			computed = async.computed(this, {
 				watch: ['num'],
 				watchClosely: ['yes'],
-				async get({ num, yes }) { return await delay(25, yes ? num + 1 : 4) },
+				async get({ num, yes }) { return await Promise.delay(25, yes ? num + 1 : 4) },
 				default: 0,
 			})
 		}
@@ -252,7 +252,7 @@ describe('computed', () => {
 			@async.Computed
 			computed = async.computed(this, {
 				watch: ['num'],
-				async get({ num }) { return await delay(25, num + 1) },
+				async get({ num }) { return await Promise.delay(25, num + 1) },
 			})
 		}
 		const a = new A()
@@ -277,7 +277,7 @@ describe('computed', () => {
 		expect(m.vm.computed.queued).true
 		expect(m.vm.computed.value).eql(null)
 
-		await delay(25)
+		await Promise.delay(25)
 		expect(m.vm.computed.promise).a('promise')
 		expect(m.vm.computed.loading).true
 		expect(m.vm.computed.queued).false
@@ -296,7 +296,7 @@ describe('computed', () => {
 			computed = async.computed(this, {
 				watch: ['num'],
 				watchClosely: ['yes'],
-				async get({ num, yes }) { return await delay(25, yes ? num + 1 : 4) },
+				async get({ num, yes }) { return await Promise.delay(25, yes ? num + 1 : 4) },
 			})
 		}
 		const a = new A()
@@ -340,7 +340,7 @@ describe('computed', () => {
 				watchClosely: ['num'],
 				async get({ num }) {
 					if (num === 10) throw new Error('e')
-					return await delay(25, num + 1)
+					return await Promise.delay(25, num + 1)
 				},
 				error: errorHandler,
 				default: 0,
@@ -389,7 +389,7 @@ describe('computed', () => {
 				watchClosely() { return { other: this.num } },
 				async get({ other }) {
 					if (other === 10) throw new Error('e')
-					return await delay(25, other + 1)
+					return await Promise.delay(25, other + 1)
 				},
 				error: errorHandler,
 				default: 0,
@@ -435,7 +435,7 @@ describe('computed', () => {
 			@async.Computed
 			computed = async.computed(this, {
 				watchClosely: ['num'],
-				async get({ num }) { return await delay(25, num + 1) },
+				async get({ num }) { return await Promise.delay(25, num + 1) },
 				eager: true,
 			})
 		}
@@ -472,7 +472,7 @@ describe('computed', () => {
 			@async.Computed
 			computed = async.computed(this, {
 				watchClosely: ['num'],
-				async get({ num }) { return await delay(25, num + 1) },
+				async get({ num }) { return await Promise.delay(25, num + 1) },
 				default: 0,
 			})
 		}
@@ -506,7 +506,7 @@ describe('computed', () => {
 			@async.Computed
 			computed = async.computed(this, {
 				watchClosely: ['num'],
-				async get({ num }) { return await delay(25, num + 1) },
+				async get({ num }) { return await Promise.delay(25, num + 1) },
 			})
 		}
 		const a = new A()
