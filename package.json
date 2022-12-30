@@ -41,7 +41,7 @@
 		"handlebars": "^4.5.3",
 		"jsdom": "^15.1.1",
 		"jsdom-global": "^3.0.2",
-		"mocha": "^6.2.0",
+		"mocha": "^10.2.0",
 		"sinon": "^7.4.1",
 		"ts-node": "^8.3.0",
 		"typescript": "^3.5.3",
